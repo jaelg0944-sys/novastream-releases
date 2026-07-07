@@ -279,3 +279,147 @@
 .episode-item:hover .episode-play {
   color: var(--primary-color);
 }
+
+/* ── Repelis24 Search Bar ── */
+.catalog-search-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  max-width: 320px;
+  width: 100%;
+}
+
+.catalog-search-input {
+  width: 100%;
+  padding: 10px 16px 10px 40px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: white;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+  outline: none;
+}
+
+.catalog-search-input:focus {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--primary-color);
+  box-shadow: 0 0 10px var(--primary-glow);
+}
+
+.catalog-search-icon {
+  position: absolute;
+  left: 14px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.catalog-search-clear {
+  position: absolute;
+  right: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+
+.catalog-search-clear:hover {
+  color: white;
+}
+
+/* ── Servers Selector Grid ── */
+.servers-title {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-top: 15px;
+  margin-bottom: 10px;
+  color: white;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 6px;
+}
+
+.servers-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-top: 5px;
+}
+
+.server-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: white;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.server-btn:hover {
+  background: rgba(140, 0, 255, 0.15);
+  border-color: var(--primary-color);
+  transform: translateY(-1px);
+}
+
+.server-lang-tag {
+  font-size: 0.65rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.server-lang-tag.latino {
+  background: rgba(0, 212, 255, 0.15);
+  color: var(--secondary-color);
+  border: 1px solid rgba(0, 212, 255, 0.3);
+}
+
+.server-lang-tag.castellano {
+  background: rgba(255, 171, 0, 0.15);
+  color: #ffab00;
+  border: 1px solid rgba(255, 171, 0, 0.3);
+}
+
+.server-lang-tag.subtitulado {
+  background: rgba(0, 230, 118, 0.15);
+  color: #00e676;
+  border: 1px solid rgba(0, 230, 118, 0.3);
+}
+
+.resolving-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(5, 5, 8, 0.85);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: white;
+  z-index: 5;
+}
+
+/* ── EPG Category Count / Rating Tags ── */
+.rating-tag {
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  color: #ffab00;
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 2;
+}
+
