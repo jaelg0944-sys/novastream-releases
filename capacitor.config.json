@@ -1,0 +1,10 @@
+{
+  "appId": "com.geomar.novastreamtv",
+  "appName": "NovaStream TV",
+  "webDir": "dist",
+  "plugins": {
+    "CapacitorUpdater": {
+      "autoUpdate": false
+    }
+  }
+}

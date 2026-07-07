@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">novastream-tv</string>
+    <string name="title_activity_main">novastream-tv</string>
+    <string name="package_name">com.geomar.novastreamtv</string>
+    <string name="custom_url_scheme">com.geomar.novastreamtv</string>
+</resources>
