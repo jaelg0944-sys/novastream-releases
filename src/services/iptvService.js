@@ -19,37 +19,32 @@ const CHANNELS = [
   { id: 'ec2',  name: 'Teleamazonas',   logo: `${BASE}/assets/teleamazonas.png`, streamUrl: 'https://teleamazonas-live.cdn.vustreams.com/live/fd4ab346-b4e3-4628-abf0-b5a1bc192428/live.isml/fd4ab346-b4e3-4628-abf0-b5a1bc192428.m3u8', category: 'Nacionales' },
   { id: 'ec3',  name: 'Oromar TV',      logo: `${BASE}/assets/oromartv.png`,     streamUrl: 'https://stream.oromar.tv/hls/oromartv_hi/index.m3u8', category: 'Nacionales' },
   { id: 'ec4',  name: 'TVC',            logo: `${BASE}/assets/tvc.png`,          streamUrl: 'https://library-getafix.fireclip.tv/56e2d24bfdcf13ab4a321867/live/live_1.m3u8', category: 'Nacionales' },
-  { id: 'ec5',  name: 'Gamavisión',     logo: `${BASE}/assets/gamavision.png`,   streamUrl: `${BASE}/stream/gamavision/playlist.m3u8`, category: 'Nacionales' },
+  { id: 'ec5',  name: 'Gamavisión',     logo: `${BASE}/assets/gamavision.png`,   streamUrl: 'http://45.224.97.181:9999/Gamavision/index.m3u8', category: 'Nacionales' },
   { id: 'ec6',  name: 'TC Televisión',  logo: `${BASE}/assets/tc.png`,           streamUrl: 'http://179.60.51.134:8888/TC/index.m3u8', category: 'Nacionales' },
   { id: 'ec7',  name: 'RTS',            logo: `${BASE}/assets/rts.png`,          streamUrl: 'https://d2w3o8zn50cs1k.cloudfront.net/ts:abr.m3u8', category: 'Nacionales' },
   { id: 'ec8',  name: 'Canal Uno',      logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2e/Canal_Uno_Ecuador.svg/320px-Canal_Uno_Ecuador.svg.png', streamUrl: 'https://stmv6.voxtvhd.com.br/sonorama/sonorama/playlist.m3u8', category: 'Nacionales' },
-  { id: 'ec9',  name: 'Ecuador TV',     logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/40/Ecuador_TV_Logo.svg/320px-Ecuador_TV_Logo.svg.png', streamUrl: 'https://video-eu1.streamerr.co/hls/s64029a8fdf/live.m3u8', category: 'Nacionales' },
+  { id: 'ec9',  name: 'Ecuador TV',     logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/40/Ecuador_TV_Logo.svg/320px-Ecuador_TV_Logo.svg.png', streamUrl: 'http://45.224.97.181:9999/EcuadorTV/index.m3u8', category: 'Nacionales' },
   { id: 'ec10', name: 'RTU',            logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/70/Logotipo_RTU.svg/320px-Logotipo_RTU.svg.png', streamUrl: 'https://video1.makrodigital.com/rtu/rtu/chunks.m3u8', category: 'Nacionales' },
   { id: 'ec11', name: 'Telerama',       logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d5/Telerama_Ecuador_logo.svg/320px-Telerama_Ecuador_logo.svg.png', streamUrl: 'https://play.once.net.ec/telerama/live.tv/538.m3u8', category: 'Nacionales' },
 
   // ─── Nacionales España ───
   { id: 'es1', name: 'La 1 (España)',   logo: `${BASE}/assets/la1.png`,          streamUrl: 'https://rtvelivestream.rtve.es/rtvesec/la1/la1_main_dvr.m3u8', category: 'Nacionales', country: 'España' },
   { id: 'es2', name: 'La 2 (España)',   logo: `${BASE}/assets/la2.png`,          streamUrl: 'https://rtvelivestream.rtve.es/rtvesec/la2/la2_main_dvr.m3u8', category: 'Nacionales', country: 'España' },
-  { id: 'es3', name: 'Clan TV',         logo: `${BASE}/assets/clan.png`,         streamUrl: 'https://d1wca51iywzyn1.cloudfront.net/v1/master/3722c60a815c199d9c0ef36c5b73da68a62b09d1/cc-e2jakfg63mh4b/ClanES.m3u8', category: 'Nacionales', country: 'España' },
-  { id: 'es4', name: 'Canal 24H',       logo: `${BASE}/assets/24h.png`,          streamUrl: 'https://rtvelivestream.rtve.es/rtvesec/24h/24h_main_dvr.m3u8', category: 'Nacionales', country: 'España' },
+  { id: 'es3', name: 'Canal 24H',       logo: `${BASE}/assets/24h.png`,          streamUrl: 'https://rtvelivestream.rtve.es/rtvesec/24h/24h_main_dvr.m3u8', category: 'Nacionales', country: 'España' },
+
   { id: 'es5', name: 'Teledeporte',     logo: `${BASE}/assets/teledeporte.png`,  streamUrl: 'https://rtvelivestream.rtve.es/rtvesec/tdp/tdp_main.m3u8', category: 'Deportes', country: 'España' },
   { id: 'es6', name: 'Real Madrid TV',  logo: `${BASE}/assets/realmadrid.png`,   streamUrl: 'https://rmtv.akamaized.net/hls/live/2043153/rmtv-es-web/master.m3u8', category: 'Deportes', country: 'España' },
 
   // ─── Deportes ───
-  { id: 'rd1',  name: 'DSports',        logo: `${BASE}/assets/dsports.webp`,     streamUrl: `${BASE}/stream/dsports/playlist.m3u8`, category: 'Deportes' },
-  { id: 'rd2',  name: 'DSports 2',      logo: `${BASE}/assets/dsports2.webp`,    streamUrl: `${BASE}/stream/dsports2/playlist.m3u8`, category: 'Deportes' },
-  { id: 'rd22', name: 'ESPN 5',         logo: `${BASE}/assets/espn.svg`,         streamUrl: `${BASE}/stream/espn5/playlist.m3u8`, category: 'Deportes' },
-  { id: 'rd23', name: 'ESPN 6',         logo: `${BASE}/assets/espn.svg`,         streamUrl: `${BASE}/stream/espn6/playlist.m3u8`, category: 'Deportes' },
-  { id: 'rd24', name: 'ESPN 7',         logo: `${BASE}/assets/espn.svg`,         streamUrl: `${BASE}/stream/espn7/playlist.m3u8`, category: 'Deportes' },
-  { id: 'rd26', name: 'VTV Plus',       logo: `${BASE}/assets/vtvplus.png`,      streamUrl: `${BASE}/stream/vtvplus/playlist.m3u8`, category: 'Deportes' },
-  { id: 'rd9',  name: 'Fox Sports 3',   logo: `${BASE}/assets/foxsports3.webp`,  streamUrl: `${BASE}/stream/fox-sports-3/playlist.m3u8`, category: 'Deportes' },
-  { id: 'rd14', name: 'TUDN',           logo: `${BASE}/assets/tudn.svg`,         streamUrl: `${BASE}/stream/tudn/playlist.m3u8`, category: 'Deportes' },
-  { id: 'rd15', name: 'Win Sports',     logo: `${BASE}/assets/winsports.svg`,    streamUrl: `${BASE}/stream/win-sports/playlist.m3u8`, category: 'Deportes' },
+  { id: 'rd1',  name: 'ESPN',           logo: `${BASE}/assets/espn.svg`,         streamUrl: 'http://200.115.120.1:8000/play/ca040/index.m3u8', category: 'Deportes' },
+  { id: 'rd2',  name: 'ESPN 2',         logo: `${BASE}/assets/espn.svg`,         streamUrl: 'http://200.115.120.1:8000/play/ca041/index.m3u8', category: 'Deportes' },
+  { id: 'rd3',  name: 'ESPN 3',         logo: `${BASE}/assets/espn.svg`,         streamUrl: 'http://200.115.120.1:8000/play/ca042/index.m3u8', category: 'Deportes' },
+  { id: 'rd14', name: 'TUDN',           logo: `${BASE}/assets/tudn.svg`,         streamUrl: 'http://200.115.120.1:8000/play/ca039/index.m3u8', category: 'Deportes' },
 
   // ─── Infantil ───
   { id: 'ki1', name: 'Canela Kids',     logo: `${BASE}/assets/canelakids.png`,   streamUrl: 'https://amg00658-amg00658c47-canelatv-international-7222.playouts.now.amagi.tv/playlist/amg00658-canelamediafast-canelakids-canelatvinternational/playlist.m3u8', category: 'Infantil' },
-  { id: 'f01', name: 'Disney Channel',  logo: 'https://upload.wikimedia.org/wikipedia/commons/f/ff/2024_Disney_Channel_text_logo.svg', streamUrl: 'http://138.121.15.230:9002/DISNEY-CHANNEL/index.m3u8', category: 'Infantil', country: 'Latinoamérica' },
-  { id: 'f02', name: 'Disney Jr.',      logo: 'https://upload.wikimedia.org/wikipedia/commons/e/e3/2024_Disney_Jr._Logo.svg', streamUrl: 'http://179.60.51.134:8888/DISNEY-JR/index.m3u8', category: 'Infantil', country: 'Latinoamérica' },
+  { id: 'f01', name: 'Disney Channel',  logo: 'https://upload.wikimedia.org/wikipedia/commons/f/ff/2024_Disney_Channel_text_logo.svg', streamUrl: 'http://45.185.163.75:8000/play/a02j/index.m3u8', category: 'Infantil', country: 'Latinoamérica' },
+  { id: 'f02', name: 'Disney Jr.',      logo: 'https://upload.wikimedia.org/wikipedia/commons/e/e3/2024_Disney_Jr._Logo.svg', streamUrl: 'http://45.185.163.75:8000/play/a016/index.m3u8', category: 'Infantil', country: 'Latinoamérica' },
   { id: 'f03', name: 'Nickelodeon',     logo: 'https://i.imgur.com/E84jnP8.png', streamUrl: 'http://179.60.51.134:8888/NICK/index.m3u8', category: 'Infantil', country: 'Latinoamérica' },
   { id: 'f04', name: 'Nick Jr.',        logo: 'https://i.imgur.com/KT4tdQs.png', streamUrl: 'http://179.60.51.134:8888/NICK-JR/index.m3u8', category: 'Infantil', country: 'Latinoamérica' },
 
@@ -60,15 +55,17 @@ const CHANNELS = [
 
   // ─── Entretenimiento ───
   { id: 'f05', name: 'MTV',             logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/68/MTV_2021_%28brand_version%29.svg/960px-MTV_2021_%28brand_version%29.svg.png', streamUrl: 'http://179.60.51.134:8888/MTV/index.m3u8', category: 'Entretenimiento', country: 'Latinoamérica' },
-  { id: 'f06', name: 'Comedy Central',  logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/Comedy_Central_2018.svg/960px-Comedy_Central_2018.svg.png', streamUrl: 'http://103.111.40.244:9999/play/a0i5/index.m3u8', category: 'Entretenimiento', country: 'Latinoamérica' },
+  { id: 'f06', name: 'Comedy Central',  logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/Comedy_Central_2018.svg/960px-Comedy_Central_2018.svg.png', streamUrl: 'http://181.119.93.83:8000/play/a1di/index.m3u8', category: 'Entretenimiento', country: 'Latinoamérica' },
 
   // ─── Cine ───
-  { id: 'f07', name: 'Star Channel',      logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/Star_Channel_2020.svg/960px-Star_Channel_2020.svg.png', streamUrl: 'http://bantel-cdn1.iptvperu.tv:1935/btnscrtn/StarChannel.stream/playlist.m3u8', category: 'Cine', country: 'Latinoamérica' },
+  { id: 'f07', name: 'Star Channel',    logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/Star_Channel_2020.svg/960px-Star_Channel_2020.svg.png', streamUrl: 'http://bantel-cdn1.iptvperu.tv:1935/btnscrtn/StarChannel.stream/playlist.m3u8', category: 'Cine', country: 'Latinoamérica' },
+  { id: 'f12', name: 'AXN',             logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/AXN_logo_%282015%29.svg/960px-AXN_logo_%282015%29.svg.png', streamUrl: 'http://177.234.249.178:8888/AXN/index.m3u8', category: 'Cine', country: 'Latinoamérica' },
+  { id: 'f13', name: 'Cinecanal',       logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e6/CinecanalLA.png/960px-CinecanalLA.png', streamUrl: 'http://bantel-cdn1.iptvperu.tv:1935/btnscrtn/cinecanal.stream/playlist.m3u8', category: 'Cine', country: 'Latinoamérica' },
   { id: 'f08', name: 'Studio Universal', logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/StudioUniversal2016.png/960px-StudioUniversal2016.png', streamUrl: 'http://138.121.15.230:9002/STUDIO-UNIVERSAL/index.m3u8', category: 'Cine', country: 'Latinoamérica' },
   { id: 'f09', name: 'Universal TV',    logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/42/Universal_TV_logo.svg/960px-Universal_TV_logo.svg.png', streamUrl: 'http://138.121.15.230:9002/UNIVERSAL-CHANNEL/index.m3u8', category: 'Cine', country: 'Latinoamérica' },
 
   // ─── Documentales ───
-  { id: 'f10', name: 'A&E',             logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/A%26E_Network_logo.svg/500px-A%26E_Network_logo.svg.png', streamUrl: 'http://45.185.163.75:8000/play/a0t1/index.m3u8', category: 'Documentales', country: 'Latinoamérica' },
+  { id: 'f10', name: 'A&E',             logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/A%26E_Network_logo.svg/500px-A%26E_Network_logo.svg.png', streamUrl: 'http://138.121.15.230:9002/A&E/index.m3u8', category: 'Documentales', country: 'Latinoamérica' },
   { id: 'f11', name: 'History Channel', logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/01/History_%282021%29.svg/500px-History_%282021%29.svg.png', streamUrl: 'http://138.121.15.230:9002/HISTORY-CHANNEL/index.m3u8', category: 'Documentales', country: 'Latinoamérica' },
 
 ].map(channel => ({
