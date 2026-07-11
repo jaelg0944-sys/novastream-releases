@@ -122,13 +122,15 @@ export default function LiveTV() {
     sessionStorage.setItem('novastream_last_played_channel_id', ch.id);
 
     // Si es un canal iframe explícito, abrir en reproductor interno de inmediato
-    if (ch.isIframe) {
+    if (ch.isIframe || ch.isDashed) {
       navigate('/player', {
         state: { 
           streamUrl: ch.streamUrl, 
           channelName: ch.name, 
           category: ch.category, 
-          isIframe: true 
+          isIframe: ch.isIframe || false,
+          isDashed: ch.isDashed || false,
+          drm: ch.drm || null
         },
       });
       return;
@@ -143,7 +145,13 @@ export default function LiveTV() {
         return;
       }
       navigate('/player', {
-        state: { streamUrl: url, channelName: ch.name, category: ch.category },
+        state: { 
+          streamUrl: url, 
+          channelName: ch.name, 
+          category: ch.category,
+          isDashed: ch.isDashed || false,
+          drm: ch.drm || null
+        },
       });
       return;
     }
@@ -163,7 +171,13 @@ export default function LiveTV() {
           return;
         }
         navigate('/player', {
-          state: { streamUrl: finalUrl, channelName: ch.name, category: ch.category },
+          state: { 
+            streamUrl: finalUrl, 
+            channelName: ch.name, 
+            category: ch.category,
+            isDashed: ch.isDashed || false,
+            drm: ch.drm || null
+          },
         });
       }
     } catch (err) {

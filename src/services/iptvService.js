@@ -6,7 +6,7 @@ import { CapacitorHttp } from '@capacitor/core';
 
 // ── Configuración ──────────────────────────────────────────
 const BRIDGE_SERVER = 'https://server-sigma-cyan.vercel.app';
-const CACHE_KEY = 'novastream_iptv_data_v62';
+const CACHE_KEY = 'novastream_iptv_data_v63';
 const CACHE_EXPIRY = 60 * 60 * 1000; // 1 hora
 
 // ── Base URL para assets locales ───────────────────────────
@@ -35,8 +35,19 @@ const CHANNELS = [
   { id: 'es5', name: 'Teledeporte',     logo: `${BASE}/assets/teledeporte.png`,  streamUrl: 'https://rtvelivestream.rtve.es/rtvesec/tdp/tdp_main.m3u8', category: 'Deportes', country: 'España' },
   { id: 'es6', name: 'Real Madrid TV',  logo: `${BASE}/assets/realmadrid.png`,   streamUrl: 'https://rmtv.akamaized.net/hls/live/2043153/rmtv-es-web/master.m3u8', category: 'Deportes', country: 'España' },
 
-  // ─── Deportes ───
-  { id: 'dsports', name: 'DSports (DirecTV)', logo: `${BASE}/assets/dsports.png`, streamUrl: 'https://www.rojadirectaa.net/embed/eventos.html?r=aHR0cHM6Ly9sYTE2aGQuY29tL2RzcG9ydHNhci5waHA=', category: 'Deportes', isIframe: true },
+  { 
+    id: 'dsports', 
+    name: 'DSports (DirecTV)', 
+    logo: `${BASE}/assets/dsports.png`, 
+    streamUrl: 'https://otte-qw.live.pv-cdn.net/pdx-nitro/live/clients/dash/enc/3gg2jnixjn/out/v1/e1840e01f3f14563b66bbb944d5cc54c/cenc.mpd', 
+    category: 'Deportes', 
+    isDashed: true,
+    drm: {
+      clearKeys: {
+        'f8b207c10f3f76aeba32a360ec52b9e4': 'afad49d20eb39670e93e371c1d669921'
+      }
+    }
+  },
   { id: 'rd1',  name: 'ESPN',           logo: `${BASE}/assets/espn.png`,         streamUrl: 'http://200.115.120.1:8000/play/ca040/index.m3u8', category: 'Deportes' },
   { id: 'rd2',  name: 'ESPN 2',         logo: `${BASE}/assets/espn.png`,         streamUrl: 'http://200.115.120.1:8000/play/ca041/index.m3u8', category: 'Deportes' },
   { id: 'rd3',  name: 'ESPN 3',         logo: `${BASE}/assets/espn.png`,         streamUrl: 'http://200.115.120.1:8000/play/ca042/index.m3u8', category: 'Deportes' },

@@ -14,6 +14,8 @@ export default function Player() {
   const channelName = location.state?.channelName || 'Live TV';
   const channelCategory = location.state?.category || 'En Vivo';
   const isIframe = location.state?.isIframe || false;
+  const isDashed = location.state?.isDashed || false;
+  const drm = location.state?.drm || null;
   const options = location.state?.options || [];
   const currentOptionNume = location.state?.currentOptionNume || '1';
 
@@ -24,6 +26,7 @@ export default function Player() {
   const [isLoadingServer, setIsLoadingServer] = useState(true);
   const [isResolvingVod, setIsResolvingVod] = useState(false);
   const [shouldUseIframeState, setShouldUseIframeState] = useState(isIframe);
+  const shakaPlayerRef = useRef(null);
 
   const [isPlaying, setIsPlaying] = useState(true);
   const [showControls, setShowControls] = useState(true);
@@ -163,49 +166,105 @@ export default function Player() {
 
     let hls;
 
-    if (Hls.isSupported()) {
-      hls = new Hls({
-        maxBufferLength: 5,
-        maxMaxBufferLength: 10,
-        maxBufferSize: 3 * 1000 * 1000,
-        liveSyncDurationCount: 2,
-        liveMaxLatencyDurationCount: 4,
-        enableWorker: true,
-        lowLatencyMode: true,
-        backBufferLength: 0,
-        startLevel: -1,
-      });
-      hls.loadSource(resolvedStreamUrl);
-      hls.attachMedia(videoRef.current);
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        videoRef.current.play().catch(err => {
-          console.error("Auto-play prevented:", err);
-          setIsPlaying(false);
-        });
-      });
-      hls.on(Hls.Events.ERROR, (event, data) => {
-        if (data.fatal) {
-          console.error("HLS fatal error:", data);
+    const initPlayer = async () => {
+      const isDashUrl = resolvedStreamUrl.includes('.mpd');
+      if (isDashed || isDashUrl) {
+        try {
+          console.log('[Player] Inicializando Shaka Player para DASH...');
+          if (!window.shaka) {
+            await new Promise((resolve, reject) => {
+              const script = document.createElement('script');
+              script.src = 'https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/shaka-player.compiled.js';
+              script.onload = resolve;
+              script.onerror = () => reject(new Error('No se pudo cargar Shaka Player CDN'));
+              document.head.appendChild(script);
+            });
+          }
+
+          window.shaka.polyfill.installAll();
+          if (window.shaka.Player.isBrowserSupported()) {
+            const shakaPlayer = new window.shaka.Player(videoRef.current);
+            shakaPlayerRef.current = shakaPlayer;
+
+            if (drm && drm.clearKeys) {
+              shakaPlayer.configure({
+                drm: {
+                  clearKeys: drm.clearKeys
+                }
+              });
+            }
+
+            shakaPlayer.addEventListener('error', (event) => {
+              console.error('Shaka Player error:', event.detail);
+              setError(true);
+            });
+
+            await shakaPlayer.load(resolvedStreamUrl);
+            videoRef.current.play().catch(err => {
+              console.error("Auto-play prevented (DASH):", err);
+              setIsPlaying(false);
+            });
+          } else {
+            console.error('El navegador no soporta Shaka Player.');
+            setError(true);
+          }
+        } catch (err) {
+          console.error('Error cargando DASH en Shaka Player:', err);
           setError(true);
         }
-      });
-    } else if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
-      // Para Safari / iOS
-      videoRef.current.src = resolvedStreamUrl;
-      videoRef.current.addEventListener('loadedmetadata', () => {
-        videoRef.current.play().catch(err => {
-          console.error("Auto-play prevented:", err);
-          setIsPlaying(false);
+        return;
+      }
+
+      // HLS normal
+      if (Hls.isSupported()) {
+        hls = new Hls({
+          maxBufferLength: 5,
+          maxMaxBufferLength: 10,
+          maxBufferSize: 3 * 1000 * 1000,
+          liveSyncDurationCount: 2,
+          liveMaxLatencyDurationCount: 4,
+          enableWorker: true,
+          lowLatencyMode: true,
+          backBufferLength: 0,
+          startLevel: -1,
         });
-      });
-      videoRef.current.addEventListener('error', () => {
-        setError(true);
-      });
-    }
+        hls.loadSource(resolvedStreamUrl);
+        hls.attachMedia(videoRef.current);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          videoRef.current.play().catch(err => {
+            console.error("Auto-play prevented:", err);
+            setIsPlaying(false);
+          });
+        });
+        hls.on(Hls.Events.ERROR, (event, data) => {
+          if (data.fatal) {
+            console.error("HLS fatal error:", data);
+            setError(true);
+          }
+        });
+      } else if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
+        videoRef.current.src = resolvedStreamUrl;
+        videoRef.current.addEventListener('loadedmetadata', () => {
+          videoRef.current.play().catch(err => {
+            console.error("Auto-play prevented:", err);
+            setIsPlaying(false);
+          });
+        });
+        videoRef.current.addEventListener('error', () => {
+          setError(true);
+        });
+      }
+    };
+
+    initPlayer();
 
     return () => {
       if (hls) {
         hls.destroy();
+      }
+      if (shakaPlayerRef.current) {
+        shakaPlayerRef.current.destroy();
+        shakaPlayerRef.current = null;
       }
       ScreenOrientation.unlock().catch(() => {});
     };
