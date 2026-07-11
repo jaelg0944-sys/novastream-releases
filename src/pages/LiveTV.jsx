@@ -9,7 +9,9 @@ import './LiveTV.css';
 
 export default function LiveTV() {
   const navigate = useNavigate();
-  const [activeCategory, setActiveCategory] = useState('Todos');
+  const [activeCategory, setActiveCategory] = useState(() => {
+    return sessionStorage.getItem('novastream_active_category') || 'Todos';
+  });
   const [channels, setChannels] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -33,7 +35,9 @@ export default function LiveTV() {
         const data = await fetchIPTVData();
         setChannels(data);
         if (data.length > 0) {
-          setSelectedChannel(data[0]);
+          const savedCat = sessionStorage.getItem('novastream_active_category') || 'Todos';
+          const filtered = savedCat === 'Todos' ? data : data.filter(c => c.category === savedCat);
+          setSelectedChannel(filtered.length > 0 ? filtered[0] : data[0]);
         }
       } catch (err) {
         console.error('Error cargando canales:', err);
@@ -220,6 +224,7 @@ export default function LiveTV() {
                         className={`category-btn ${activeCategory === cat ? 'active' : ''}`}
                         onClick={() => {
                           setActiveCategory(cat);
+                          sessionStorage.setItem('novastream_active_category', cat);
                           const newChannels = cat === 'Todos' ? channels : channels.filter(c => c.category === cat);
                           if (newChannels.length > 0) setSelectedChannel(newChannels[0]);
                         }}
