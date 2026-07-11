@@ -217,10 +217,10 @@ export default function Catalog() {
                   </div>
                 )}
                 <img 
-                  src={item.poster || 'https://repelis24.ing/wp-content/themes/repelis24.ing/assets/img/no/dt_poster.png'} 
+                  src={item.poster || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="220" height="320"><rect fill="%23222" width="220" height="320"/><text fill="%23666" font-size="14" x="50%" y="50%" dominant-baseline="middle" text-anchor="middle">Sin Poster</text></svg>'} 
                   alt={item.title} 
                   onError={(e) => {
-                    e.target.src = 'https://repelis24.ing/wp-content/themes/repelis24.ing/assets/img/no/dt_poster.png';
+                    e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="220" height="320"><rect fill="%23222" width="220" height="320"/><text fill="%23666" font-size="14" x="50%" y="50%" dominant-baseline="middle" text-anchor="middle">Sin Poster</text></svg>';
                   }}
                 />
                 <div className="catalog-card-overlay">
