@@ -6,7 +6,7 @@ import { CapacitorHttp } from '@capacitor/core';
 
 // ── Configuración ──────────────────────────────────────────
 const BRIDGE_SERVER = 'https://server-sigma-cyan.vercel.app';
-const CACHE_KEY = 'novastream_iptv_data_v56';
+const CACHE_KEY = 'novastream_iptv_data_v57';
 const CACHE_EXPIRY = 60 * 60 * 1000; // 1 hora
 
 // ── Base URL para assets locales ───────────────────────────
@@ -15,14 +15,14 @@ const BASE = '';
 // ── Lista de Canales Estáticos (Ll) ────────────────────────
 const CHANNELS = [
   // ─── Nacionales Ecuador ───
-  { id: 'ec1',  name: 'Ecuavisa',       logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/Ecuavisa_Logo.svg/320px-Ecuavisa_Logo.svg.png',    streamUrl: 'https://dai.google.com/linear/hls/event/GyPkTVDZSXGhpOvxPK7m2g/master.m3u8', category: 'Nacionales' },
-  { id: 'ec2',  name: 'Teleamazonas',   logo: 'https://upload.wikimedia.org/wikipedia/commons/e/e9/Teleamazonas_logo.png', streamUrl: 'https://teleamazonas-live.cdn.vustreams.com/live/fd4ab346-b4e3-4628-abf0-b5a1bc192428/live.isml/fd4ab346-b4e3-4628-abf0-b5a1bc192428.m3u8', category: 'Nacionales' },
-  { id: 'ec3',  name: 'Oromar TV',      logo: 'https://upload.wikimedia.org/wikipedia/commons/7/77/Logo_Oromar_TV.png',     streamUrl: 'https://stream.oromar.tv/hls/oromartv_hi/index.m3u8', category: 'Nacionales' },
-  { id: 'ec4',  name: 'TVC',            logo: 'https://upload.wikimedia.org/wikipedia/commons/8/8b/Logo_TVC_Ecuador.png',          streamUrl: 'https://library-getafix.fireclip.tv/56e2d24bfdcf13ab4a321867/live/live_1.m3u8', category: 'Nacionales' },
-  { id: 'ec5',  name: 'Gamavisión',     logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/cf/Gamavisi%C3%B3n_Ecuador_logo.svg/320px-Gamavisi%C3%B3n_Ecuador_logo.svg.png',   streamUrl: 'http://45.224.97.181:9999/Gamavision/index.m3u8', category: 'Nacionales' },
-  { id: 'ec6',  name: 'TC Televisión',  logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/14/TC_Televisi%C3%B3n_logo_2022.svg/320px-TC_Televisi%C3%B3n_logo_2022.svg.png',           streamUrl: 'http://179.60.51.134:8888/TC/index.m3u8', category: 'Nacionales' },
-  { id: 'ec7',  name: 'RTS',            logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/RTS_Ecuador_logo.svg/320px-RTS_Ecuador_logo.svg.png',          streamUrl: 'https://d2w3o8zn50cs1k.cloudfront.net/ts:abr.m3u8', category: 'Nacionales' },
-  { id: 'ec8',  name: 'Canal Uno',      logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/27/Canal_Uno_%28Ecuador%29_logo.png/320px-Canal_Uno_%28Ecuador%29_logo.png', streamUrl: 'https://stmv6.voxtvhd.com.br/sonorama/sonorama/playlist.m3u8', category: 'Nacionales' },
+  { id: 'ec1',  name: 'Ecuavisa',       logo: 'https://i.imgur.com/89s6lZ1.png',    streamUrl: 'https://dai.google.com/linear/hls/event/GyPkTVDZSXGhpOvxPK7m2g/master.m3u8', category: 'Nacionales' },
+  { id: 'ec2',  name: 'Teleamazonas',   logo: 'https://i.imgur.com/M619yL4.png', streamUrl: 'https://teleamazonas-live.cdn.vustreams.com/live/fd4ab346-b4e3-4628-abf0-b5a1bc192428/live.isml/fd4ab346-b4e3-4628-abf0-b5a1bc192428.m3u8', category: 'Nacionales' },
+  { id: 'ec3',  name: 'Oromar TV',      logo: 'https://i.imgur.com/n14aVfJ.png',     streamUrl: 'https://stream.oromar.tv/hls/oromartv_hi/index.m3u8', category: 'Nacionales' },
+  { id: 'ec4',  name: 'TVC',            logo: 'https://i.imgur.com/W2l4Dk9.png',          streamUrl: 'https://library-getafix.fireclip.tv/56e2d24bfdcf13ab4a321867/live/live_1.m3u8', category: 'Nacionales' },
+  { id: 'ec5',  name: 'Gamavisión',     logo: 'https://i.imgur.com/U8hM52E.png',   streamUrl: 'http://45.224.97.181:9999/Gamavision/index.m3u8', category: 'Nacionales' },
+  { id: 'ec6',  name: 'TC Televisión',  logo: 'https://i.imgur.com/W0pDpx7.png',           streamUrl: 'http://179.60.51.134:8888/TC/index.m3u8', category: 'Nacionales' },
+  { id: 'ec7',  name: 'RTS',            logo: 'https://i.imgur.com/B94zQ5P.png',          streamUrl: 'https://d2w3o8zn50cs1k.cloudfront.net/ts:abr.m3u8', category: 'Nacionales' },
+  { id: 'ec8',  name: 'Canal Uno',      logo: 'https://i.imgur.com/4qK4k6I.png', streamUrl: 'https://stmv6.voxtvhd.com.br/sonorama/sonorama/playlist.m3u8', category: 'Nacionales' },
   { id: 'ec9',  name: 'Ecuador TV',     logo: 'https://i.imgur.com/hj6EYwe.png', streamUrl: 'http://45.224.97.181:9999/EcuadorTV/index.m3u8', category: 'Nacionales' },
   { id: 'ec10', name: 'RTU',            logo: 'https://i.imgur.com/1OWvMP4.png', streamUrl: 'https://video1.makrodigital.com/rtu/rtu/chunks.m3u8', category: 'Nacionales' },
   { id: 'ec11', name: 'Telerama',       logo: 'https://i.imgur.com/whIRrjo.png', streamUrl: 'https://play.once.net.ec/telerama/live.tv/538.m3u8', category: 'Nacionales' },
