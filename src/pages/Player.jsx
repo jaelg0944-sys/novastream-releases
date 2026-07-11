@@ -170,12 +170,13 @@ export default function Player() {
           </div>
         </div>
 
-        {/* Iframe de reproducción */}
+        {/* Iframe de reproducción con sandbox para bloquear ventanas emergentes y publicidad invasiva */}
         <iframe
           src={streamUrl}
           className="player-iframe"
           allow="autoplay; encrypted-media; fullscreen"
           allowFullScreen
+          sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
           frameBorder="0"
           style={{
             width: '100%',
