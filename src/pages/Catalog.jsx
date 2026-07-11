@@ -323,11 +323,50 @@ export default function Catalog() {
                 </button>
               </div>
               <div className="episodes-list">
-                {selectedSeries.episodes.map((ep) => (
+                {selectedSeries.episodes.map((ep, idx) => (
                   <div
-                    key={ep.number}
+                    key={idx}
                     className="episode-item"
-                    onClick={() => handlePlayEpisode(ep, selectedSeries.title)}
+                    onClick={() => {
+                      if (selectedSeries.id === 'custom-asi-aprenderas') {
+                        handlePlayEpisode(ep, selectedSeries.title);
+                      } else {
+                        // Catalog series: show server selection
+                        setSelectedRepelisItem({
+                          title: `${selectedSeries.title} - ${ep.title}`,
+                          poster: selectedSeries.poster,
+                          description: selectedSeries.description,
+                          year: selectedSeries.year,
+                          options: [
+                            {
+                              nume: '1',
+                              type: `https://vidsrc.to/embed/tv/${selectedSeries.id}/${ep.season}/${ep.number}`,
+                              post: selectedSeries.id,
+                              server: 'Servidor 1 (vidsrc.to)',
+                              lang: 'Latino / Multi-idioma',
+                              embedUrl: `https://vidsrc.to/embed/tv/${selectedSeries.id}/${ep.season}/${ep.number}`
+                            },
+                            {
+                              nume: '2',
+                              type: `https://vidsrcme.ru/embed/tv?tmdb=${selectedSeries.id}&season=${ep.season}&episode=${ep.number}`,
+                              post: selectedSeries.id,
+                              server: 'Servidor 2 (vidsrc.me)',
+                              lang: 'Latino / Multi-idioma',
+                              embedUrl: `https://vidsrcme.ru/embed/tv?tmdb=${selectedSeries.id}&season=${ep.season}&episode=${ep.number}`
+                            },
+                            {
+                              nume: '3',
+                              type: `https://www.2embed.cc/embedtv/${selectedSeries.id}&s=${ep.season}&e=${ep.number}`,
+                              post: selectedSeries.id,
+                              server: 'Servidor 3 (2embed)',
+                              lang: 'Latino / Multi-idioma',
+                              embedUrl: `https://www.2embed.cc/embedtv/${selectedSeries.id}&s=${ep.season}&e=${ep.number}`
+                            }
+                          ]
+                        });
+                        setSelectedSeries(null); // Cerrar modal de episodios para ver el de servidores
+                      }
+                    }}
                   >
                     <div className="episode-number">{ep.number}</div>
                     <div className="episode-info">

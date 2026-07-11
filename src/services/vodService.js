@@ -1,9 +1,9 @@
 // src/services/vodService.js
 // Catálogo VOD integrado — Películas y Series en Español Latino
-// Reproductor: embed.su (verificado activo)
+// Reproductores activos y estables
 
-const EMBED_MOVIE = 'https://embed.su/embed/movie';
-const EMBED_TV = 'https://embed.su/embed/tv';
+const EMBED_MOVIE = 'https://vidsrc.to/embed/movie';
+const EMBED_TV = 'https://vidsrc.to/embed/tv';
 const POSTER = 'https://image.tmdb.org/t/p/w500';
 
 // ═══════════════════════════════════════════════════════════════
@@ -14,6 +14,7 @@ function buildEpisodes(tmdbId, season, count) {
   for (let i = 1; i <= count; i++) {
     eps.push({
       number: i,
+      season: season,
       title: `Temporada ${season} - Episodio ${i}`,
       streamUrl: `${EMBED_TV}/${tmdbId}/${season}/${i}`,
       isIframe: true
@@ -207,9 +208,9 @@ export const fetchRepelisDetails = async (url) => {
     postId: tmdbId,
     description: movie ? movie.desc : '',
     options: [
-      { nume: '1', type: `https://embed.su/embed/movie/${tmdbId}`, post: tmdbId, server: 'Servidor 1 (HD)', lang: 'Latino / Sub', embedUrl: `https://embed.su/embed/movie/${tmdbId}` },
-      { nume: '2', type: `https://multiembed.mov/?video_id=${tmdbId}&tmdb=1`, post: tmdbId, server: 'Servidor 2', lang: 'Latino / Sub', embedUrl: `https://multiembed.mov/?video_id=${tmdbId}&tmdb=1` },
-      { nume: '3', type: `https://vidsrc.pro/embed/movie/${tmdbId}`, post: tmdbId, server: 'Servidor 3', lang: 'Latino / Sub', embedUrl: `https://vidsrc.pro/embed/movie/${tmdbId}` },
+      { nume: '1', type: `https://vidsrc.to/embed/movie/${tmdbId}`, post: tmdbId, server: 'Servidor 1 (vidsrc.to)', lang: 'Latino / Multi', embedUrl: `https://vidsrc.to/embed/movie/${tmdbId}` },
+      { nume: '2', type: `https://vidsrcme.ru/embed/movie/${tmdbId}`, post: tmdbId, server: 'Servidor 2 (vidsrc.me)', lang: 'Latino / Multi', embedUrl: `https://vidsrcme.ru/embed/movie/${tmdbId}` },
+      { nume: '3', type: `https://www.2embed.cc/embed/${tmdbId}`, post: tmdbId, server: 'Servidor 3 (2embed)', lang: 'Latino / Multi', embedUrl: `https://www.2embed.cc/embed/${tmdbId}` },
     ]
   };
 };
@@ -217,5 +218,5 @@ export const fetchRepelisDetails = async (url) => {
 // Embed URL
 export const fetchRepelisEmbed = async (post, type, nume) => {
   if (type && type.startsWith('http')) return type;
-  return `${EMBED_MOVIE}/${post}`;
+  return `https://vidsrc.to/embed/movie/${post}`;
 };
