@@ -15,13 +15,13 @@ const BASE = '';
 // ── Lista de Canales Estáticos (Ll) ────────────────────────
 const CHANNELS = [
   // ─── Nacionales Ecuador ───
-  { id: 'ec1',  name: 'Ecuavisa',       logo: `${BASE}/assets/ecuavisa.webp`,    streamUrl: 'https://dai.google.com/linear/hls/event/GyPkTVDZSXGhpOvxPK7m2g/master.m3u8', category: 'Nacionales' },
-  { id: 'ec2',  name: 'Teleamazonas',   logo: `${BASE}/assets/teleamazonas.png`, streamUrl: 'https://teleamazonas-live.cdn.vustreams.com/live/fd4ab346-b4e3-4628-abf0-b5a1bc192428/live.isml/fd4ab346-b4e3-4628-abf0-b5a1bc192428.m3u8', category: 'Nacionales' },
-  { id: 'ec3',  name: 'Oromar TV',      logo: `${BASE}/assets/oromartv.png`,     streamUrl: 'https://stream.oromar.tv/hls/oromartv_hi/index.m3u8', category: 'Nacionales' },
-  { id: 'ec4',  name: 'TVC',            logo: `${BASE}/assets/tvc.png`,          streamUrl: 'https://library-getafix.fireclip.tv/56e2d24bfdcf13ab4a321867/live/live_1.m3u8', category: 'Nacionales' },
-  { id: 'ec5',  name: 'Gamavisión',     logo: `${BASE}/assets/gamavision.png`,   streamUrl: 'http://45.224.97.181:9999/Gamavision/index.m3u8', category: 'Nacionales' },
-  { id: 'ec6',  name: 'TC Televisión',  logo: `${BASE}/assets/tc.png`,           streamUrl: 'http://179.60.51.134:8888/TC/index.m3u8', category: 'Nacionales' },
-  { id: 'ec7',  name: 'RTS',            logo: `${BASE}/assets/rts.png`,          streamUrl: 'https://d2w3o8zn50cs1k.cloudfront.net/ts:abr.m3u8', category: 'Nacionales' },
+  { id: 'ec1',  name: 'Ecuavisa',       logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/Ecuavisa_Logo.svg/320px-Ecuavisa_Logo.svg.png',    streamUrl: 'https://dai.google.com/linear/hls/event/GyPkTVDZSXGhpOvxPK7m2g/master.m3u8', category: 'Nacionales' },
+  { id: 'ec2',  name: 'Teleamazonas',   logo: 'https://upload.wikimedia.org/wikipedia/commons/e/e9/Teleamazonas_logo.png', streamUrl: 'https://teleamazonas-live.cdn.vustreams.com/live/fd4ab346-b4e3-4628-abf0-b5a1bc192428/live.isml/fd4ab346-b4e3-4628-abf0-b5a1bc192428.m3u8', category: 'Nacionales' },
+  { id: 'ec3',  name: 'Oromar TV',      logo: 'https://upload.wikimedia.org/wikipedia/commons/7/77/Logo_Oromar_TV.png',     streamUrl: 'https://stream.oromar.tv/hls/oromartv_hi/index.m3u8', category: 'Nacionales' },
+  { id: 'ec4',  name: 'TVC',            logo: 'https://upload.wikimedia.org/wikipedia/commons/8/8b/Logo_TVC_Ecuador.png',          streamUrl: 'https://library-getafix.fireclip.tv/56e2d24bfdcf13ab4a321867/live/live_1.m3u8', category: 'Nacionales' },
+  { id: 'ec5',  name: 'Gamavisión',     logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/cf/Gamavisi%C3%B3n_Ecuador_logo.svg/320px-Gamavisi%C3%B3n_Ecuador_logo.svg.png',   streamUrl: 'http://45.224.97.181:9999/Gamavision/index.m3u8', category: 'Nacionales' },
+  { id: 'ec6',  name: 'TC Televisión',  logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/14/TC_Televisi%C3%B3n_logo_2022.svg/320px-TC_Televisi%C3%B3n_logo_2022.svg.png',           streamUrl: 'http://179.60.51.134:8888/TC/index.m3u8', category: 'Nacionales' },
+  { id: 'ec7',  name: 'RTS',            logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/RTS_Ecuador_logo.svg/320px-RTS_Ecuador_logo.svg.png',          streamUrl: 'https://d2w3o8zn50cs1k.cloudfront.net/ts:abr.m3u8', category: 'Nacionales' },
   { id: 'ec8',  name: 'Canal Uno',      logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2e/Canal_Uno_Ecuador.svg/320px-Canal_Uno_Ecuador.svg.png', streamUrl: 'https://stmv6.voxtvhd.com.br/sonorama/sonorama/playlist.m3u8', category: 'Nacionales' },
   { id: 'ec9',  name: 'Ecuador TV',     logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/40/Ecuador_TV_Logo.svg/320px-Ecuador_TV_Logo.svg.png', streamUrl: 'http://45.224.97.181:9999/EcuadorTV/index.m3u8', category: 'Nacionales' },
   { id: 'ec10', name: 'RTU',            logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/70/Logotipo_RTU.svg/320px-Logotipo_RTU.svg.png', streamUrl: 'https://video1.makrodigital.com/rtu/rtu/chunks.m3u8', category: 'Nacionales' },
@@ -36,10 +36,10 @@ const CHANNELS = [
   { id: 'es6', name: 'Real Madrid TV',  logo: `${BASE}/assets/realmadrid.png`,   streamUrl: 'https://rmtv.akamaized.net/hls/live/2043153/rmtv-es-web/master.m3u8', category: 'Deportes', country: 'España' },
 
   // ─── Deportes ───
-  { id: 'rd1',  name: 'ESPN',           logo: `${BASE}/assets/espn.svg`,         streamUrl: 'http://200.115.120.1:8000/play/ca040/index.m3u8', category: 'Deportes' },
-  { id: 'rd2',  name: 'ESPN 2',         logo: `${BASE}/assets/espn.svg`,         streamUrl: 'http://200.115.120.1:8000/play/ca041/index.m3u8', category: 'Deportes' },
-  { id: 'rd3',  name: 'ESPN 3',         logo: `${BASE}/assets/espn.svg`,         streamUrl: 'http://200.115.120.1:8000/play/ca042/index.m3u8', category: 'Deportes' },
-  { id: 'rd14', name: 'TUDN',           logo: `${BASE}/assets/tudn.svg`,         streamUrl: 'http://200.115.120.1:8000/play/ca039/index.m3u8', category: 'Deportes' },
+  { id: 'rd1',  name: 'ESPN',           logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/ESPN_wordmark.svg/320px-ESPN_wordmark.svg.png',         streamUrl: 'http://200.115.120.1:8000/play/ca040/index.m3u8', category: 'Deportes' },
+  { id: 'rd2',  name: 'ESPN 2',         logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/ESPN_wordmark.svg/320px-ESPN_wordmark.svg.png',         streamUrl: 'http://200.115.120.1:8000/play/ca041/index.m3u8', category: 'Deportes' },
+  { id: 'rd3',  name: 'ESPN 3',         logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/ESPN_wordmark.svg/320px-ESPN_wordmark.svg.png',         streamUrl: 'http://200.115.120.1:8000/play/ca042/index.m3u8', category: 'Deportes' },
+  { id: 'rd14', name: 'TUDN',           logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/TUDN_logo.svg/320px-TUDN_logo.svg.png',         streamUrl: 'http://200.115.120.1:8000/play/ca039/index.m3u8', category: 'Deportes' },
 
   // ─── Infantil ───
   { id: 'ki1', name: 'Canela Kids',     logo: `${BASE}/assets/canelakids.png`,   streamUrl: 'https://amg00658-amg00658c47-canelatv-international-7222.playouts.now.amagi.tv/playlist/amg00658-canelamediafast-canelakids-canelatvinternational/playlist.m3u8', category: 'Infantil' },
