@@ -8,18 +8,39 @@ import './Catalog.css';
 
 export default function Catalog() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('peliculas');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState(() => {
+    return sessionStorage.getItem('novastream_catalog_active_tab') || 'peliculas';
+  });
+  const [searchQuery, setSearchQuery] = useState(() => {
+    return sessionStorage.getItem('novastream_catalog_search_query') || '';
+  });
   
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
   // Modales de detalles/reproducción
-  const [selectedSeries, setSelectedSeries] = useState(null); // Para series locales custom
-  const [selectedRepelisItem, setSelectedRepelisItem] = useState(null); // Para películas/series de Repelis24
+  const [selectedSeries, setSelectedSeries] = useState(() => {
+    const saved = sessionStorage.getItem('novastream_catalog_selected_series');
+    sessionStorage.removeItem('novastream_catalog_selected_series');
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [selectedRepelisItem, setSelectedRepelisItem] = useState(() => {
+    const saved = sessionStorage.getItem('novastream_catalog_selected_repelis_item');
+    sessionStorage.removeItem('novastream_catalog_selected_repelis_item');
+    return saved ? JSON.parse(saved) : null;
+  });
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [resolvingEmbed, setResolvingEmbed] = useState(false);
+
+  const handleCloseRepelisModal = () => {
+    setSelectedRepelisItem(null);
+    const savedSeries = sessionStorage.getItem('novastream_catalog_selected_series');
+    if (savedSeries) {
+      setSelectedSeries(JSON.parse(savedSeries));
+      sessionStorage.removeItem('novastream_catalog_selected_series');
+    }
+  };
 
   // Cargar cartelera
   const loadCartelera = async (tab, query = '') => {
@@ -70,12 +91,14 @@ export default function Catalog() {
   // Manejar el submit de la búsqueda
   const handleSearchSubmit = (e) => {
     e.preventDefault();
+    sessionStorage.setItem('novastream_catalog_search_query', searchQuery);
     loadCartelera(activeTab, searchQuery);
   };
 
   // Limpiar búsqueda
   const handleClearSearch = () => {
     setSearchQuery('');
+    sessionStorage.removeItem('novastream_catalog_search_query');
     loadCartelera(activeTab, '');
   };
 
@@ -112,6 +135,10 @@ export default function Catalog() {
 
   // Reproducir un episodio (soporta HLS directo e iframe)
   const handlePlayEpisode = (episode, seriesTitle) => {
+    sessionStorage.setItem('novastream_catalog_selected_series', JSON.stringify(selectedSeries));
+    sessionStorage.setItem('novastream_catalog_active_tab', activeTab);
+    sessionStorage.setItem('novastream_catalog_search_query', searchQuery);
+
     navigate('/player', { 
       state: { 
         streamUrl: episode.streamUrl,
@@ -131,7 +158,10 @@ export default function Catalog() {
       setResolvingEmbed(false);
 
       if (embedUrl) {
-        setSelectedRepelisItem(null); // Cerrar modal
+        sessionStorage.setItem('novastream_catalog_selected_repelis_item', JSON.stringify(selectedRepelisItem));
+        sessionStorage.setItem('novastream_catalog_active_tab', activeTab);
+        sessionStorage.setItem('novastream_catalog_search_query', searchQuery);
+
         navigate('/player', {
           state: {
             streamUrl: embedUrl,
@@ -162,13 +192,19 @@ export default function Catalog() {
             <div className="catalog-tabs">
               <button
                 className={`catalog-tab ${activeTab === 'peliculas' ? 'active' : ''}`}
-                onClick={() => setActiveTab('peliculas')}
+                onClick={() => {
+                  setActiveTab('peliculas');
+                  sessionStorage.setItem('novastream_catalog_active_tab', 'peliculas');
+                }}
               >
                 <Film size={18} /> Películas
               </button>
               <button
                 className={`catalog-tab ${activeTab === 'series' ? 'active' : ''}`}
-                onClick={() => setActiveTab('series')}
+                onClick={() => {
+                  setActiveTab('series');
+                  sessionStorage.setItem('novastream_catalog_active_tab', 'series');
+                }}
               >
                 <Clapperboard size={18} /> Series
               </button>
@@ -242,7 +278,7 @@ export default function Catalog() {
 
         {/* ── Modal de Servidores (Repelis24) ── */}
         {selectedRepelisItem && (
-          <div className="episodes-modal-backdrop" onClick={() => !resolvingEmbed && setSelectedRepelisItem(null)}>
+          <div className="episodes-modal-backdrop" onClick={() => !resolvingEmbed && handleCloseRepelisModal()}>
             <div className="episodes-modal" onClick={(e) => e.stopPropagation()} style={{ position: 'relative' }}>
               
               {resolvingEmbed && (
@@ -265,7 +301,7 @@ export default function Catalog() {
                     <span className="episodes-count">{selectedRepelisItem.year} • HD disponible</span>
                   </div>
                 </div>
-                <button className="episodes-close" onClick={() => setSelectedRepelisItem(null)} disabled={resolvingEmbed}>
+                <button className="episodes-close" onClick={() => handleCloseRepelisModal()} disabled={resolvingEmbed}>
                   <X size={24} />
                 </button>
               </div>
@@ -274,27 +310,33 @@ export default function Catalog() {
                 <h3 className="servers-title">Reproducir en Servidor:</h3>
                 
                 {selectedRepelisItem.options && selectedRepelisItem.options.length > 0 ? (
-                  <div className="servers-grid">
-                    {selectedRepelisItem.options.map((opt, idx) => {
-                      const cleanLang = opt.lang.toLowerCase();
-                      const badgeClass = cleanLang.includes('latino') ? 'latino' : cleanLang.includes('sub') ? 'subtitulado' : 'castellano';
-                      
-                      return (
-                        <button
-                          key={idx}
-                          className="server-btn"
-                          onClick={() => handlePlayServer(opt)}
-                          disabled={resolvingEmbed}
-                        >
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <Play size={12} fill="white" />
-                            {opt.server}
-                          </span>
-                          <span className={`server-lang-tag ${badgeClass}`}>{opt.lang}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <>
+                    <div className="servers-grid">
+                      {selectedRepelisItem.options.map((opt, idx) => {
+                        const cleanLang = opt.lang.toLowerCase();
+                        const badgeClass = cleanLang.includes('latino') ? 'latino' : cleanLang.includes('sub') ? 'subtitulado' : 'castellano';
+                        
+                        return (
+                          <button
+                            key={idx}
+                            className="server-btn"
+                            onClick={() => handlePlayServer(opt)}
+                            disabled={resolvingEmbed}
+                          >
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <Play size={12} fill="white" />
+                              {opt.server}
+                            </span>
+                            <span className={`server-lang-tag ${badgeClass}`}>{opt.lang}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div style={{ marginTop: '15px', padding: '10px', backgroundColor: 'rgba(255, 255, 255, 0.05)', borderRadius: '8px', fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <AlertCircle size={14} color="#ff3366" style={{ flexShrink: 0 }} />
+                      <span>Tip: Si el <b>Servidor 1</b> dice "unavailable" o no carga, prueba el <b>Servidor 2</b> o <b>Servidor 3</b> (algunos bloquean reproductores locales).</span>
+                    </div>
+                  </>
                 ) : (
                   <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', textAlign: 'center', marginTop: '10px' }}>
                     No hay servidores disponibles para este video actualmente.

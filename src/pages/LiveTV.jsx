@@ -37,7 +37,19 @@ export default function LiveTV() {
         if (data.length > 0) {
           const savedCat = sessionStorage.getItem('novastream_active_category') || 'Todos';
           const filtered = savedCat === 'Todos' ? data : data.filter(c => c.category === savedCat);
-          setSelectedChannel(filtered.length > 0 ? filtered[0] : data[0]);
+          
+          const lastPlayedId = sessionStorage.getItem('novastream_last_played_channel_id');
+          const lastPlayedChannel = data.find(c => c.id === lastPlayedId);
+
+          if (lastPlayedChannel && (savedCat === 'Todos' || lastPlayedChannel.category === savedCat)) {
+            setSelectedChannel(lastPlayedChannel);
+            setTimeout(() => {
+              const el = document.getElementById(`channel-${lastPlayedId}`);
+              if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 600);
+          } else {
+            setSelectedChannel(filtered.length > 0 ? filtered[0] : data[0]);
+          }
         }
       } catch (err) {
         console.error('Error cargando canales:', err);
@@ -105,6 +117,9 @@ export default function LiveTV() {
   const handlePlay = async (channel) => {
     const ch = channel || selectedChannel;
     if (!ch) return;
+
+    // Guardar ID del último canal reproducido en sesión
+    sessionStorage.setItem('novastream_last_played_channel_id', ch.id);
 
     // Verificar si hay un enlace pre-resuelto en caché
     const cached = preResolvedCache[ch.id];
@@ -241,6 +256,7 @@ export default function LiveTV() {
                     {activeChannels.map(channel => (
                       <div
                         key={channel.id}
+                        id={`channel-${channel.id}`}
                         className={`channel-card ${selectedChannel?.id === channel.id ? 'selected' : ''} ${resolvingId === channel.id ? 'resolving' : ''}`}
                         onClick={() => handleChannelClick(channel)}
                       >
