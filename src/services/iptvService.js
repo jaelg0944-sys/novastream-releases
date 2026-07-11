@@ -6,7 +6,7 @@ import { CapacitorHttp } from '@capacitor/core';
 
 // ── Configuración ──────────────────────────────────────────
 const BRIDGE_SERVER = 'https://server-sigma-cyan.vercel.app';
-const CACHE_KEY = 'novastream_iptv_data_v61';
+const CACHE_KEY = 'novastream_iptv_data_v62';
 const CACHE_EXPIRY = 60 * 60 * 1000; // 1 hora
 
 // ── Base URL para assets locales ───────────────────────────
