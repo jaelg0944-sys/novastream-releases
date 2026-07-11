@@ -27,17 +27,14 @@ export default function Catalog() {
     setError(false);
     try {
       if (query.trim() !== '') {
-        // Buscar
+        // Buscar en todo el catálogo
         const results = await searchRepelis(query);
-        // Filtrar localmente según el tab activo si es necesario
-        // En Repelis24 las búsquedas devuelven mezclado películas y series
         const filtered = results.filter(item => {
           if (tab === 'peliculas') return item.type === 'movie';
-          return item.type === 'tvshow';
+          return item.type === 'series';
         });
         
         if (tab === 'series') {
-          // Prepend de series custom si coinciden con la búsqueda
           const matchedCustom = customSeries.filter(s => 
             s.title.toLowerCase().includes(query.toLowerCase()) || 
             s.description.toLowerCase().includes(query.toLowerCase())
@@ -113,13 +110,14 @@ export default function Catalog() {
     }
   };
 
-  // Reproducir un episodio de la serie local custom
+  // Reproducir un episodio (soporta HLS directo e iframe)
   const handlePlayEpisode = (episode, seriesTitle) => {
     navigate('/player', { 
       state: { 
         streamUrl: episode.streamUrl,
         channelName: `${seriesTitle} - ${episode.title}`,
-        category: 'Series'
+        category: 'Series',
+        isIframe: episode.isIframe || false
       } 
     });
   };
@@ -257,7 +255,7 @@ export default function Catalog() {
               <div className="episodes-modal-header">
                 <div className="episodes-modal-info">
                   <img 
-                    src={selectedRepelisItem.poster || 'https://repelis24.ing/wp-content/themes/repelis24.ing/assets/img/no/dt_poster.png'} 
+                    src={selectedRepelisItem.poster || ''} 
                     alt={selectedRepelisItem.title} 
                     className="episodes-poster" 
                   />
