@@ -194,6 +194,21 @@ export default function Player() {
               });
             }
 
+            // Configuraciones de rendimiento para evitar congelamientos y buffering
+            shakaPlayer.configure({
+              streaming: {
+                bufferingGoal: 6,           // Cargar hasta 6 segundos por adelantado
+                rebufferingGoal: 2,         // Reanudar la reproducción con solo 2 segundos de buffer
+                bufferBehind: 10,           // Mantener 10 segundos de historial atrás en memoria
+                lowLatencyMode: true,       // Modo de baja latencia para transmisiones en vivo
+                retryParameters: {
+                  maxAttempts: 5,           // Reintentar solicitudes de red fallidas hasta 5 veces
+                  baseDelay: 1000,          // Retraso base de 1 segundo entre reintentos
+                  backoffFactor: 2          // Multiplicar el retraso de reintento en cada fallo
+                }
+              }
+            });
+
             shakaPlayer.addEventListener('error', (event) => {
               console.error('Shaka Player error:', event.detail);
               setError(true);
