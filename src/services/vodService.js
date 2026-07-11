@@ -1,7 +1,10 @@
 // src/services/vodService.js
-// Servicio VOD para películas y series, integrando repelis24.ing y series personalizadas
+// Servicio VOD para películas y series, integrando scraping directo desde repelis24.ing y series personalizadas
 
-const BRIDGE_SERVER = 'https://server-sigma-cyan.vercel.app';
+// Usamos un proxy CORS público y robusto de respaldo para evitar bloqueos de CORS en desarrollo web,
+// pero en Capacitor (móvil) y Electron (PC con webSecurity: false) los requests se pueden hacer de forma directa.
+const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
+const BASE_URL = 'https://repelis24.ing';
 
 // Series personalizadas del usuario (como "Así Aprenderás")
 export const customSeries = [
@@ -24,26 +27,147 @@ export const customSeries = [
   }
 ];
 
-// Obtener cartelera de repelis24
+// Helper para hacer fetch tolerante a CORS
+async function fetchHtml(url) {
+  // Intentar fetch directo primero
+  try {
+    const res = await fetch(url);
+    if (res.ok) return await res.text();
+  } catch (e) {
+    console.warn('[VOD Service] Fetch directo falló por CORS, intentando con proxy...', e.message);
+  }
+
+  // De respaldo, usar proxy CORS
+  const proxyUrl = `${CORS_PROXY}${encodeURIComponent(url)}`;
+  const res = await fetch(proxyUrl);
+  if (!res.ok) throw new Error('Error al conectar con la base de datos de películas');
+  const data = await res.text();
+  return data;
+}
+
+// Scraper de items de la cartelera/búsqueda
+function extractRepelisItems(html) {
+  const items = [];
+  const articleRegex = /<article[^>]*class=["']item\s+(movies|tvshows)["'][^>]*>([\s\S]*?)<\/article>/g;
+  let match;
+  
+  while ((match = articleRegex.exec(html)) !== null) {
+    const type = match[1];
+    const articleHtml = match[2];
+    
+    const idMatch = articleHtml.match(/id=["']post-(\d+)["']/);
+    const postId = idMatch ? idMatch[1] : null;
+    
+    const imgMatch = articleHtml.match(/<img[^>]+src=["']([^"']+)["'][^>]+alt=["']([^"']+)["']/) || 
+                     articleHtml.match(/<img[^>]+alt=["']([^"']+)["'][^>]+src=["']([^"']+)["']/);
+    let poster = '';
+    let title = '';
+    if (imgMatch) {
+      if (imgMatch[1].startsWith('http')) {
+        poster = imgMatch[1];
+        title = imgMatch[2];
+      } else {
+        poster = imgMatch[2];
+        title = imgMatch[1];
+      }
+    }
+    
+    const linkMatch = articleHtml.match(/<a[^>]+href=["']([^"']+)["'][^>]*>/);
+    const detailUrl = linkMatch ? linkMatch[1] : '';
+    
+    const ratingMatch = articleHtml.match(/<div[^>]*class=["']rating["'][^>]*>([^<]+)<\/div>/);
+    const rating = ratingMatch ? ratingMatch[1].trim() : '0';
+    
+    const yearMatch = articleHtml.match(/<span>([^<]+)<\/span>/);
+    const year = yearMatch ? yearMatch[1].trim() : '';
+    
+    if (title && detailUrl) {
+      items.push({
+        id: postId,
+        title,
+        type: type === 'movies' ? 'movie' : 'tvshow',
+        poster,
+        url: detailUrl,
+        rating,
+        year
+      });
+    }
+  }
+  return items;
+}
+
+// Scraper de detalles y reproductores
+function extractRepelisDetails(html) {
+  const descMatch = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["']/i) || 
+                    html.match(/<meta[^>]*content=["']([^"']+)["'][^>]*name=["']description["']/i);
+  const description = descMatch ? descMatch[1].trim() : '';
+
+  const postMatch = html.match(/data-post=['"](\d+)['"]/) || 
+                    html.match(/name=['"]comment_post_ID['"] value=['"](\d+)['"]/);
+  const postId = postMatch ? postMatch[1] : null;
+
+  const options = [];
+  const optionRegex = /<li[^>]*class=['"]dooplay_player_option['"][^>]*data-type=['"]([^'"]+)['"][^>]*data-post=['"]([^'"]+)['"][^>]*data-nume=['"]([^'"]+)['"][^>]*>([\s\S]*?)<\/li>/g;
+  let match;
+  
+  while ((match = optionRegex.exec(html)) !== null) {
+    const type = match[1];
+    const post = match[2];
+    const nume = match[3];
+    const innerHtml = match[4];
+
+    const titleMatch = innerHtml.match(/<span class=['"]title['"]>([^<]+)<\/span>/);
+    const serverName = titleMatch ? titleMatch[1].trim() : 'Server';
+
+    const langMatch = innerHtml.match(/flags\/([^.]+)\.png/);
+    const lang = langMatch ? langMatch[1] : 'es';
+
+    options.push({
+      nume,
+      type,
+      post,
+      server: serverName,
+      lang: lang === 'en' ? 'Subtitulado' : lang === 'es' ? 'Castellano' : 'Latino'
+    });
+  }
+
+  return {
+    postId,
+    description,
+    options
+  };
+}
+
+// ── APIs del Servicio ──────────────────────────────────────
+
+// Obtener cartelera
 export const fetchRepelisCartelera = async (type = 'pelicula', page = 1) => {
   try {
-    const res = await fetch(`${BRIDGE_SERVER}/api/repelis/cartelera?type=${type}&page=${page}`);
-    if (!res.ok) throw new Error('Error al obtener cartelera de Repelis24');
-    return await res.json();
+    let targetUrl = `${BASE_URL}/`;
+    if (type === 'serie') {
+      targetUrl = page > 1 ? `${BASE_URL}/serie/page/${page}/` : `${BASE_URL}/serie/`;
+    } else {
+      targetUrl = page > 1 ? `${BASE_URL}/pelicula/page/${page}/` : `${BASE_URL}/pelicula/`;
+    }
+
+    console.log(`[VOD] Cargando cartelera: ${targetUrl}`);
+    const html = await fetchHtml(targetUrl);
+    return extractRepelisItems(html);
   } catch (error) {
-    console.error('Error fetching Repelis VOD data:', error);
+    console.error('Error fetching VOD data:', error);
     return [];
   }
 };
 
-// Buscar películas o series en repelis24
+// Buscar películas o series
 export const searchRepelis = async (query) => {
   try {
-    const res = await fetch(`${BRIDGE_SERVER}/api/repelis/buscar?query=${encodeURIComponent(query)}`);
-    if (!res.ok) throw new Error('Error al buscar en Repelis24');
-    return await res.json();
+    const targetUrl = `${BASE_URL}/?s=${encodeURIComponent(query)}`;
+    console.log(`[VOD] Buscando: ${targetUrl}`);
+    const html = await fetchHtml(targetUrl);
+    return extractRepelisItems(html);
   } catch (error) {
-    console.error('Error searching Repelis VOD:', error);
+    console.error('Error searching VOD:', error);
     return [];
   }
 };
@@ -51,9 +175,9 @@ export const searchRepelis = async (query) => {
 // Obtener detalles de una película/serie
 export const fetchRepelisDetails = async (url) => {
   try {
-    const res = await fetch(`${BRIDGE_SERVER}/api/repelis/detalles?url=${encodeURIComponent(url)}`);
-    if (!res.ok) throw new Error('Error al obtener detalles');
-    return await res.json();
+    console.log(`[VOD] Obteniendo detalles: ${url}`);
+    const html = await fetchHtml(url);
+    return extractRepelisDetails(html);
   } catch (error) {
     console.error('Error fetching details:', error);
     return null;
@@ -63,10 +187,38 @@ export const fetchRepelisDetails = async (url) => {
 // Obtener el enlace embed final del player de video
 export const fetchRepelisEmbed = async (post, type, nume) => {
   try {
-    const res = await fetch(`${BRIDGE_SERVER}/api/repelis/embed?post=${post}&type=${type}&nume=${nume}`);
-    if (!res.ok) throw new Error('Error al obtener el enlace del player');
-    const data = await res.json();
-    return data.embed_url || null;
+    const targetUrl = `${BASE_URL}/wp-json/dooplayer/v2/${post}/${type}/${nume}`;
+    console.log(`[VOD] Obteniendo enlace embed: ${targetUrl}`);
+    
+    let embedUrl = null;
+    try {
+      const res = await fetch(targetUrl);
+      if (res.ok) {
+        const data = await res.json();
+        embedUrl = data.embed_url || null;
+      }
+    } catch (e) {
+      console.warn('[VOD] Fetch directo de embed falló por CORS, usando proxy...');
+    }
+
+    if (!embedUrl) {
+      const proxyUrl = `${CORS_PROXY}${encodeURIComponent(targetUrl)}`;
+      const res = await fetch(proxyUrl);
+      if (res.ok) {
+        const data = await res.json();
+        embedUrl = data.embed_url || null;
+      }
+    }
+
+    if (embedUrl) {
+      // Limpiar iframe tags si vienen integrados en el response
+      const iframeMatch = embedUrl.match(/src=['"]([^'"]+)['"]/);
+      if (iframeMatch) {
+        embedUrl = iframeMatch[1];
+      }
+    }
+
+    return embedUrl;
   } catch (error) {
     console.error('Error fetching embed:', error);
     return null;
