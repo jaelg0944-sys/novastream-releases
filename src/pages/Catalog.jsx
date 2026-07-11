@@ -198,7 +198,7 @@ export default function Catalog() {
         {loading || loadingDetail ? (
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flex: 1, flexDirection: 'column', gap: '1rem', color: 'white', marginTop: '15vh' }}>
             <Loader size={48} className="spin" color="#ff3366" />
-            <p>{loadingDetail ? 'Cargando servidores de video...' : 'Conectando con Repelis24...'}</p>
+            <p>{loadingDetail ? 'Cargando servidores de video...' : 'Cargando catálogo de películas...'}</p>
           </div>
         ) : error ? (
            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flex: 1, flexDirection: 'column', gap: '1rem', color: 'white', marginTop: '15vh' }}>

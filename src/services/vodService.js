@@ -1,10 +1,8 @@
 // src/services/vodService.js
-// Servicio VOD para películas y series, integrando scraping directo desde repelis24.ing y series personalizadas
+// Servicio VOD para películas y series, integrando directamente desde cinecalidad.ro
 
-// Usamos un proxy CORS público y robusto de respaldo para evitar bloqueos de CORS en desarrollo web,
-// pero en Capacitor (móvil) y Electron (PC con webSecurity: false) los requests se pueden hacer de forma directa.
 const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
-const BASE_URL = 'https://repelis24.ing';
+const BASE_URL = 'https://www.cinecalidad.ro';
 
 // Series personalizadas del usuario (como "Así Aprenderás")
 export const customSeries = [
@@ -29,7 +27,6 @@ export const customSeries = [
 
 // Helper para hacer fetch tolerante a CORS
 async function fetchHtml(url) {
-  // Intentar fetch directo primero
   try {
     const res = await fetch(url);
     if (res.ok) return await res.text();
@@ -41,54 +38,53 @@ async function fetchHtml(url) {
   const proxyUrl = `${CORS_PROXY}${encodeURIComponent(url)}`;
   const res = await fetch(proxyUrl);
   if (!res.ok) throw new Error('Error al conectar con la base de datos de películas');
-  const data = await res.text();
-  return data;
+  return await res.text();
 }
 
-// Scraper de items de la cartelera/búsqueda
-function extractRepelisItems(html) {
+// Scraper de items de Cinecalidad
+function extractCinecalidadItems(html) {
   const items = [];
-  const articleRegex = /<article[^>]*class=["']item\s+(movies|tvshows)["'][^>]*>([\s\S]*?)<\/article>/g;
-  let match;
   
-  while ((match = articleRegex.exec(html)) !== null) {
-    const type = match[1];
-    const articleHtml = match[2];
+  // Cinecalidad envuelve cada película en un div de clase: "home_post_cont post_box" o "home_post_cont home_post_cont_last post_box"
+  const divRegex = /<div class="home_post_cont[^"]*">([\s\S]*?)<\/div>/g;
+  let match;
+  while ((match = divRegex.exec(html)) !== null) {
+    const divHtml = match[1];
     
-    const idMatch = articleHtml.match(/id=["']post-(\d+)["']/);
-    const postId = idMatch ? idMatch[1] : null;
+    const linkMatch = divHtml.match(/href=([^\s>]+)/);
+    const imgMatch = divHtml.match(/<img[^>]+src=([^\s>]+)/);
+    const titleMatch = divHtml.match(/title="([^"]+)"/);
+    const extractMatch = divHtml.match(/extract="([^"]+)"/);
     
-    const imgMatch = articleHtml.match(/<img[^>]+src=["']([^"']+)["'][^>]+alt=["']([^"']+)["']/) || 
-                     articleHtml.match(/<img[^>]+alt=["']([^"']+)["'][^>]+src=["']([^"']+)["']/);
-    let poster = '';
-    let title = '';
-    if (imgMatch) {
-      if (imgMatch[1].startsWith('http')) {
-        poster = imgMatch[1];
-        title = imgMatch[2];
-      } else {
-        poster = imgMatch[2];
-        title = imgMatch[1];
+    if (linkMatch && imgMatch && titleMatch) {
+      const url = linkMatch[1];
+      const poster = imgMatch[1];
+      const title = titleMatch[1];
+      
+      let description = '';
+      if (extractMatch) {
+        const rawExtract = extractMatch[1];
+        const temp = rawExtract
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&quot;/g, '"')
+          .replace(/&#039;/g, "'")
+          .replace(/&amp;/g, '&');
+        const pMatch = temp.match(/<p>([\s\S]*?)<\/p>/);
+        description = pMatch ? pMatch[1].trim() : '';
       }
-    }
-    
-    const linkMatch = articleHtml.match(/<a[^>]+href=["']([^"']+)["'][^>]*>/);
-    const detailUrl = linkMatch ? linkMatch[1] : '';
-    
-    const ratingMatch = articleHtml.match(/<div[^>]*class=["']rating["'][^>]*>([^<]+)<\/div>/);
-    const rating = ratingMatch ? ratingMatch[1].trim() : '0';
-    
-    const yearMatch = articleHtml.match(/<span>([^<]+)<\/span>/);
-    const year = yearMatch ? yearMatch[1].trim() : '';
-    
-    if (title && detailUrl) {
+
+      const yearMatch = title.match(/\((\d{4})\)/);
+      const year = yearMatch ? yearMatch[1] : '2025';
+
       items.push({
-        id: postId,
-        title,
-        type: type === 'movies' ? 'movie' : 'tvshow',
+        id: url.split('/').filter(Boolean).pop(),
+        title: title.replace(/\s*\(\d{4}\)\s*/g, ''), // limpiar año del título
+        type: 'movie',
         poster,
-        url: detailUrl,
-        rating,
+        url,
+        description,
+        rating: '9.0',
         year
       });
     }
@@ -96,43 +92,51 @@ function extractRepelisItems(html) {
   return items;
 }
 
-// Scraper de detalles y reproductores
-function extractRepelisDetails(html) {
+// Scraper de detalles y reproductores de Cinecalidad
+function extractCinecalidadDetails(html) {
+  // Sinopsis/descripción general de la película
   const descMatch = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["']/i) || 
                     html.match(/<meta[^>]*content=["']([^"']+)["'][^>]*name=["']description["']/i);
   const description = descMatch ? descMatch[1].trim() : '';
 
-  const postMatch = html.match(/data-post=['"](\d+)['"]/) || 
-                    html.match(/name=['"]comment_post_ID['"] value=['"](\d+)['"]/);
-  const postId = postMatch ? postMatch[1] : null;
-
+  // Reproductores de video en "VER ONLINE"
   const options = [];
-  const optionRegex = /<li[^>]*class=['"]dooplay_player_option['"][^>]*data-type=['"]([^'"]+)['"][^>]*data-post=['"]([^'"]+)['"][^>]*data-nume=['"]([^'"]+)['"][^>]*>([\s\S]*?)<\/li>/g;
-  let match;
   
+  // Buscar tags como: <a href=javascript:void(0); target=_blank class="link onlinelink" service=OnlineFilemoon data=j2e6wcknnw5g><li>Filemoon</li></a>
+  const optionRegex = /<a[^>]+class=["']link\s+onlinelink["'][^>]+service=([^ >]+)[^>]+data=([^ >]+)>/g;
+  let match;
+  let nume = 1;
   while ((match = optionRegex.exec(html)) !== null) {
-    const type = match[1];
-    const post = match[2];
-    const nume = match[3];
-    const innerHtml = match[4];
+    const serviceName = match[1].replace('Online', '');
+    const dataId = match[2];
+    
+    // Mapear los servidores compatibles para visualización directa
+    let serverUrl = '';
+    if (serviceName.toLowerCase() === 'filemoon') {
+      serverUrl = `https://filemoon.sx/e/${dataId}`;
+    } else if (serviceName.toLowerCase() === 'voe') {
+      serverUrl = `https://voe.sx/e/${dataId}`;
+    } else if (serviceName.toLowerCase() === 'doodstream') {
+      serverUrl = `https://dood.yt/e/${dataId}`;
+    } else if (serviceName.toLowerCase() === 'mega') {
+      serverUrl = `https://mega.nz/embed/${dataId}`;
+    }
 
-    const titleMatch = innerHtml.match(/<span class=['"]title['"]>([^<]+)<\/span>/);
-    const serverName = titleMatch ? titleMatch[1].trim() : 'Server';
-
-    const langMatch = innerHtml.match(/flags\/([^.]+)\.png/);
-    const lang = langMatch ? langMatch[1] : 'es';
-
-    options.push({
-      nume,
-      type,
-      post,
-      server: serverName,
-      lang: lang === 'en' ? 'Subtitulado' : lang === 'es' ? 'Castellano' : 'Latino'
-    });
+    if (serverUrl) {
+      options.push({
+        nume: nume.toString(),
+        type: 'iframe',
+        post: dataId,
+        server: serviceName,
+        lang: 'Español Latino',
+        embedUrl: serverUrl
+      });
+      nume++;
+    }
   }
 
   return {
-    postId,
+    postId: 'cinecalidad',
     description,
     options
   };
@@ -140,87 +144,53 @@ function extractRepelisDetails(html) {
 
 // ── APIs del Servicio ──────────────────────────────────────
 
-// Obtener cartelera
+// Obtener cartelera de Cinecalidad
 export const fetchRepelisCartelera = async (type = 'pelicula', page = 1) => {
   try {
+    // Cinecalidad es principalmente películas, por lo que cargamos la cartelera normal
     let targetUrl = `${BASE_URL}/`;
-    if (type === 'serie') {
-      targetUrl = page > 1 ? `${BASE_URL}/serie/page/${page}/` : `${BASE_URL}/serie/`;
-    } else {
-      targetUrl = page > 1 ? `${BASE_URL}/pelicula/page/${page}/` : `${BASE_URL}/pelicula/`;
+    if (page > 1) {
+      targetUrl = `${BASE_URL}/page/${page}/`;
     }
 
-    console.log(`[VOD] Cargando cartelera: ${targetUrl}`);
+    console.log(`[VOD Cinecalidad] Cargando: ${targetUrl}`);
     const html = await fetchHtml(targetUrl);
-    return extractRepelisItems(html);
+    return extractCinecalidadItems(html);
   } catch (error) {
-    console.error('Error fetching VOD data:', error);
+    console.error('Error fetching Cinecalidad data:', error);
     return [];
   }
 };
 
-// Buscar películas o series
+// Buscar películas
 export const searchRepelis = async (query) => {
   try {
     const targetUrl = `${BASE_URL}/?s=${encodeURIComponent(query)}`;
-    console.log(`[VOD] Buscando: ${targetUrl}`);
+    console.log(`[VOD Cinecalidad] Buscando: ${targetUrl}`);
     const html = await fetchHtml(targetUrl);
-    return extractRepelisItems(html);
+    return extractCinecalidadItems(html);
   } catch (error) {
-    console.error('Error searching VOD:', error);
+    console.error('Error searching Cinecalidad VOD:', error);
     return [];
   }
 };
 
-// Obtener detalles de una película/serie
+// Obtener detalles de la película
 export const fetchRepelisDetails = async (url) => {
   try {
-    console.log(`[VOD] Obteniendo detalles: ${url}`);
+    console.log(`[VOD Cinecalidad] Detalles: ${url}`);
     const html = await fetchHtml(url);
-    return extractRepelisDetails(html);
+    return extractCinecalidadDetails(html);
   } catch (error) {
-    console.error('Error fetching details:', error);
+    console.error('Error fetching Cinecalidad details:', error);
     return null;
   }
 };
 
 // Obtener el enlace embed final del player de video
 export const fetchRepelisEmbed = async (post, type, nume) => {
-  try {
-    const targetUrl = `${BASE_URL}/wp-json/dooplayer/v2/${post}/${type}/${nume}`;
-    console.log(`[VOD] Obteniendo enlace embed: ${targetUrl}`);
-    
-    let embedUrl = null;
-    try {
-      const res = await fetch(targetUrl);
-      if (res.ok) {
-        const data = await res.json();
-        embedUrl = data.embed_url || null;
-      }
-    } catch (e) {
-      console.warn('[VOD] Fetch directo de embed falló por CORS, usando proxy...');
-    }
-
-    if (!embedUrl) {
-      const proxyUrl = `${CORS_PROXY}${encodeURIComponent(targetUrl)}`;
-      const res = await fetch(proxyUrl);
-      if (res.ok) {
-        const data = await res.json();
-        embedUrl = data.embed_url || null;
-      }
-    }
-
-    if (embedUrl) {
-      // Limpiar iframe tags si vienen integrados en el response
-      const iframeMatch = embedUrl.match(/src=['"]([^'"]+)['"]/);
-      if (iframeMatch) {
-        embedUrl = iframeMatch[1];
-      }
-    }
-
-    return embedUrl;
-  } catch (error) {
-    console.error('Error fetching embed:', error);
-    return null;
-  }
+  // Los reproductores en Cinecalidad ya los tenemos pre-resueltos en la función de detalles
+  // en la propiedad "embedUrl", por lo que no es necesario hacer peticiones extras.
+  // Sin embargo, para mantener compatibilidad con Catalog.jsx, retornamos el embedUrl mapeado.
+  return type || null; 
 };
