@@ -6,7 +6,7 @@ import { CapacitorHttp } from '@capacitor/core';
 
 // ── Configuración ──────────────────────────────────────────
 const BRIDGE_SERVER = 'https://server-sigma-cyan.vercel.app';
-const CACHE_KEY = 'novastream_iptv_data_v54';
+const CACHE_KEY = 'novastream_iptv_data_v56';
 const CACHE_EXPIRY = 60 * 60 * 1000; // 1 hora
 
 // ── Base URL para assets locales ───────────────────────────
@@ -22,10 +22,10 @@ const CHANNELS = [
   { id: 'ec5',  name: 'Gamavisión',     logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/cf/Gamavisi%C3%B3n_Ecuador_logo.svg/320px-Gamavisi%C3%B3n_Ecuador_logo.svg.png',   streamUrl: 'http://45.224.97.181:9999/Gamavision/index.m3u8', category: 'Nacionales' },
   { id: 'ec6',  name: 'TC Televisión',  logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/14/TC_Televisi%C3%B3n_logo_2022.svg/320px-TC_Televisi%C3%B3n_logo_2022.svg.png',           streamUrl: 'http://179.60.51.134:8888/TC/index.m3u8', category: 'Nacionales' },
   { id: 'ec7',  name: 'RTS',            logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/RTS_Ecuador_logo.svg/320px-RTS_Ecuador_logo.svg.png',          streamUrl: 'https://d2w3o8zn50cs1k.cloudfront.net/ts:abr.m3u8', category: 'Nacionales' },
-  { id: 'ec8',  name: 'Canal Uno',      logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2e/Canal_Uno_Ecuador.svg/320px-Canal_Uno_Ecuador.svg.png', streamUrl: 'https://stmv6.voxtvhd.com.br/sonorama/sonorama/playlist.m3u8', category: 'Nacionales' },
-  { id: 'ec9',  name: 'Ecuador TV',     logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/40/Ecuador_TV_Logo.svg/320px-Ecuador_TV_Logo.svg.png', streamUrl: 'http://45.224.97.181:9999/EcuadorTV/index.m3u8', category: 'Nacionales' },
-  { id: 'ec10', name: 'RTU',            logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/70/Logotipo_RTU.svg/320px-Logotipo_RTU.svg.png', streamUrl: 'https://video1.makrodigital.com/rtu/rtu/chunks.m3u8', category: 'Nacionales' },
-  { id: 'ec11', name: 'Telerama',       logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d5/Telerama_Ecuador_logo.svg/320px-Telerama_Ecuador_logo.svg.png', streamUrl: 'https://play.once.net.ec/telerama/live.tv/538.m3u8', category: 'Nacionales' },
+  { id: 'ec8',  name: 'Canal Uno',      logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/27/Canal_Uno_%28Ecuador%29_logo.png/320px-Canal_Uno_%28Ecuador%29_logo.png', streamUrl: 'https://stmv6.voxtvhd.com.br/sonorama/sonorama/playlist.m3u8', category: 'Nacionales' },
+  { id: 'ec9',  name: 'Ecuador TV',     logo: 'https://i.imgur.com/hj6EYwe.png', streamUrl: 'http://45.224.97.181:9999/EcuadorTV/index.m3u8', category: 'Nacionales' },
+  { id: 'ec10', name: 'RTU',            logo: 'https://i.imgur.com/1OWvMP4.png', streamUrl: 'https://video1.makrodigital.com/rtu/rtu/chunks.m3u8', category: 'Nacionales' },
+  { id: 'ec11', name: 'Telerama',       logo: 'https://i.imgur.com/whIRrjo.png', streamUrl: 'https://play.once.net.ec/telerama/live.tv/538.m3u8', category: 'Nacionales' },
 
   // ─── Nacionales España ───
   { id: 'es1', name: 'La 1 (España)',   logo: `${BASE}/assets/la1.png`,          streamUrl: 'https://rtvelivestream.rtve.es/rtvesec/la1/la1_main_dvr.m3u8', category: 'Nacionales', country: 'España' },
