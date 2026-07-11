@@ -121,6 +121,19 @@ export default function LiveTV() {
     // Guardar ID del último canal reproducido en sesión
     sessionStorage.setItem('novastream_last_played_channel_id', ch.id);
 
+    // Si es un canal iframe explícito, abrir en reproductor interno de inmediato
+    if (ch.isIframe) {
+      navigate('/player', {
+        state: { 
+          streamUrl: ch.streamUrl, 
+          channelName: ch.name, 
+          category: ch.category, 
+          isIframe: true 
+        },
+      });
+      return;
+    }
+
     // Verificar si hay un enlace pre-resuelto en caché
     const cached = preResolvedCache[ch.id];
     if (cached && cached.url && Date.now() - cached.timestamp < 45000) {

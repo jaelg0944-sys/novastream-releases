@@ -18,9 +18,12 @@ export default function Player() {
   const currentOptionNume = location.state?.currentOptionNume || '1';
 
   const [currentStreamUrl, setCurrentStreamUrl] = useState(location.state?.streamUrl || '');
+  const [resolvedStreamUrl, setResolvedStreamUrl] = useState('');
   const [activeOptionNume, setActiveOptionNume] = useState(currentOptionNume);
   const [showServerMenu, setShowServerMenu] = useState(false);
   const [isLoadingServer, setIsLoadingServer] = useState(true);
+  const [isResolvingVod, setIsResolvingVod] = useState(false);
+  const [shouldUseIframeState, setShouldUseIframeState] = useState(isIframe);
 
   const [isPlaying, setIsPlaying] = useState(true);
   const [showControls, setShowControls] = useState(true);
@@ -28,22 +31,110 @@ export default function Player() {
   const [isMuted, setIsMuted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // Detectar si la URL debe reproducirse como iframe
-  const shouldUseIframe = isIframe || 
-    currentStreamUrl.includes('.php') || 
-    currentStreamUrl.includes('ecuaplay') || 
-    currentStreamUrl.includes('tvhd2') ||
-    currentStreamUrl.includes('dailymotion.com') ||
-    currentStreamUrl.includes('youtube.com') ||
-    currentStreamUrl.includes('vimeo.com');
-
-  // Cada vez que cambie la URL, activamos el loading con un mínimo de 1.8 segundos para evitar parpadeos
+  // Efecto para interceptar y resolver enlaces VOD dinámicamente mediante el proxy
   useEffect(() => {
-    setIsLoadingServer(true);
-    const timer = setTimeout(() => {
-      setIsLoadingServer(false);
-    }, 1800);
-    return () => clearTimeout(timer);
+    let isMounted = true;
+
+    const resolveVodUrl = async () => {
+      if (!currentStreamUrl) return;
+
+      const isResolvable = 
+        currentStreamUrl.includes('vidsrc.to/embed/movie/') || 
+        currentStreamUrl.includes('vidsrc.to/embed/tv/') ||
+        currentStreamUrl.includes('vidsrcme.ru/embed/movie/') ||
+        currentStreamUrl.includes('vidsrcme.ru/embed/tv/') ||
+        currentStreamUrl.includes('2embed.cc/embed/') ||
+        currentStreamUrl.includes('vixsrc.to/embed/');
+
+      if (isResolvable) {
+        setIsResolvingVod(true);
+        setIsLoadingServer(true);
+        setError(false);
+
+        let tmdbId = '';
+        let type = 'movie';
+        let season = '';
+        let episode = '';
+
+        if (currentStreamUrl.includes('/movie/')) {
+          const parts = currentStreamUrl.split('/');
+          tmdbId = parts[parts.indexOf('movie') + 1]?.split('?')[0];
+          type = 'movie';
+        } else if (currentStreamUrl.includes('/tv/')) {
+          const parts = currentStreamUrl.split('/');
+          const tvIndex = parts.indexOf('tv');
+          tmdbId = parts[tvIndex + 1]?.split('?')[0];
+          season = parts[tvIndex + 2]?.split('?')[0];
+          episode = parts[tvIndex + 3]?.split('?')[0];
+          type = 'tv';
+        } else if (currentStreamUrl.includes('2embed.cc/embed/')) {
+          if (currentStreamUrl.includes('/series/')) {
+            const parts = currentStreamUrl.split('/');
+            const sIndex = parts.indexOf('series');
+            tmdbId = parts[sIndex + 1];
+            season = parts[sIndex + 2];
+            episode = parts[sIndex + 3];
+            type = 'tv';
+          } else {
+            const parts = currentStreamUrl.split('/');
+            tmdbId = parts[parts.length - 1]?.split('?')[0];
+            type = 'movie';
+          }
+        } else if (currentStreamUrl.includes('/embed/')) {
+          const parts = currentStreamUrl.split('/');
+          const embedIndex = parts.indexOf('embed');
+          tmdbId = parts[embedIndex + 1]?.split('?')[0];
+          type = 'movie';
+        }
+
+        try {
+          const proxyUrl = `https://server-sigma-cyan.vercel.app/api/vixsrc/resolve?tmdb=${tmdbId}&type=${type}${season ? `&season=${season}` : ''}${episode ? `&episode=${episode}` : ''}`;
+          console.log('[Player Resolver] Resolviendo vía:', proxyUrl);
+          
+          const response = await fetch(proxyUrl, { method: 'HEAD' });
+          if (response.ok && isMounted) {
+            console.log('[Player Resolver] ¡Señal resuelta con éxito! Cargando en Hls.js nativo.');
+            setResolvedStreamUrl(proxyUrl);
+            setShouldUseIframeState(false);
+          } else {
+            throw new Error(`Status ${response.status} de la API puente`);
+          }
+        } catch (err) {
+          console.warn('[Player Resolver] Falló la resolución dinámica de HLS. Usando iframe fallback:', err.message);
+          if (isMounted) {
+            setResolvedStreamUrl(currentStreamUrl);
+            setShouldUseIframeState(true);
+          }
+        } finally {
+          if (isMounted) {
+            setIsResolvingVod(false);
+            setIsLoadingServer(false);
+          }
+        }
+      } else {
+        const checkIframe = isIframe || 
+          currentStreamUrl.includes('.php') || 
+          currentStreamUrl.includes('ecuaplay') || 
+          currentStreamUrl.includes('tvhd2') ||
+          currentStreamUrl.includes('dailymotion.com') ||
+          currentStreamUrl.includes('youtube.com') ||
+          currentStreamUrl.includes('vimeo.com') ||
+          currentStreamUrl.includes('rojadirectaa.net');
+
+        if (isMounted) {
+          setResolvedStreamUrl(currentStreamUrl);
+          setShouldUseIframeState(checkIframe);
+          setIsResolvingVod(false);
+          setIsLoadingServer(false);
+        }
+      }
+    };
+
+    resolveVodUrl();
+
+    return () => {
+      isMounted = false;
+    };
   }, [currentStreamUrl]);
 
   // Cambiar de servidor en tiempo real sin salir del reproductor
@@ -67,9 +158,8 @@ export default function Player() {
   };
 
   useEffect(() => {
-    // Si es un iframe, no necesitamos inicializar HLS
-    if (shouldUseIframe) return;
-    if (!currentStreamUrl || !videoRef.current) return;
+    if (shouldUseIframeState) return;
+    if (!resolvedStreamUrl || !videoRef.current) return;
 
     let hls;
 
@@ -85,7 +175,7 @@ export default function Player() {
         backBufferLength: 0,
         startLevel: -1,
       });
-      hls.loadSource(currentStreamUrl);
+      hls.loadSource(resolvedStreamUrl);
       hls.attachMedia(videoRef.current);
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         videoRef.current.play().catch(err => {
@@ -101,7 +191,7 @@ export default function Player() {
       });
     } else if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
       // Para Safari / iOS
-      videoRef.current.src = currentStreamUrl;
+      videoRef.current.src = resolvedStreamUrl;
       videoRef.current.addEventListener('loadedmetadata', () => {
         videoRef.current.play().catch(err => {
           console.error("Auto-play prevented:", err);
@@ -119,7 +209,7 @@ export default function Player() {
       }
       ScreenOrientation.unlock().catch(() => {});
     };
-  }, [currentStreamUrl, shouldUseIframe]);
+  }, [resolvedStreamUrl, shouldUseIframeState]);
 
   // Handle Fullscreen Exit via system back or ESC
   useEffect(() => {
@@ -137,7 +227,7 @@ export default function Player() {
 
   // Auto-hide controls
   useEffect(() => {
-    if (shouldUseIframe) return; // No auto-hide en modo iframe
+    if (shouldUseIframeState) return; // No auto-hide en modo iframe
     let timeout;
     if (isPlaying && !error) {
       timeout = setTimeout(() => setShowControls(false), 3000);
@@ -145,7 +235,7 @@ export default function Player() {
       setShowControls(true);
     }
     return () => clearTimeout(timeout);
-  }, [isPlaying, showControls, error, shouldUseIframe]);
+  }, [isPlaying, showControls, error, shouldUseIframeState]);
 
   const handleMouseMove = () => {
     setShowControls(true);
@@ -194,7 +284,7 @@ export default function Player() {
   };
 
   // ── Modo Iframe ────────────────────────────────────────────
-  if (shouldUseIframe) {
+  if (shouldUseIframeState) {
     return (
       <div className={`player-container ${isFullscreen ? 'is-fullscreen' : ''}`} ref={containerRef} onMouseMove={handleMouseMove} onClick={handleMouseMove}>
         {/* Loader estilo Netflix */}
@@ -284,6 +374,16 @@ export default function Player() {
   // ── Modo HLS Normal ────────────────────────────────────────
   return (
     <div className={`player-container ${isFullscreen ? 'is-fullscreen' : ''}`} ref={containerRef} onMouseMove={handleMouseMove} onClick={handleMouseMove}>
+      {(isLoadingServer || isResolvingVod) && (
+        <div className="netflix-loader-container" style={{ zIndex: 10 }}>
+          <div className="netflix-spinner"></div>
+          <p className="netflix-loader-text">
+            {isResolvingVod ? 'Resolviendo fuente segura...' : 'Cargando película...'}
+          </p>
+          <p className="netflix-loader-subtitle">{channelName}</p>
+        </div>
+      )}
+
       {error ? (
         <div className="player-error">
           <AlertCircle size={48} color="#ff3366" />

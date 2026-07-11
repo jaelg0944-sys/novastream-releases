@@ -36,6 +36,7 @@ const CHANNELS = [
   { id: 'es6', name: 'Real Madrid TV',  logo: `${BASE}/assets/realmadrid.png`,   streamUrl: 'https://rmtv.akamaized.net/hls/live/2043153/rmtv-es-web/master.m3u8', category: 'Deportes', country: 'España' },
 
   // ─── Deportes ───
+  { id: 'dsports', name: 'DSports (DirecTV)', logo: `${BASE}/assets/dsports.png`, streamUrl: 'https://www.rojadirectaa.net/embed/eventos.html?r=aHR0cHM6Ly9sYTE2aGQuY29tL2RzcG9ydHNhci5waHA=', category: 'Deportes', isIframe: true },
   { id: 'rd1',  name: 'ESPN',           logo: `${BASE}/assets/espn.png`,         streamUrl: 'http://200.115.120.1:8000/play/ca040/index.m3u8', category: 'Deportes' },
   { id: 'rd2',  name: 'ESPN 2',         logo: `${BASE}/assets/espn.png`,         streamUrl: 'http://200.115.120.1:8000/play/ca041/index.m3u8', category: 'Deportes' },
   { id: 'rd3',  name: 'ESPN 3',         logo: `${BASE}/assets/espn.png`,         streamUrl: 'http://200.115.120.1:8000/play/ca042/index.m3u8', category: 'Deportes' },
