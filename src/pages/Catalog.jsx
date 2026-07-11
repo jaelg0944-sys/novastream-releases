@@ -382,27 +382,35 @@ export default function Catalog() {
                           options: [
                             {
                               nume: '1',
-                              type: `https://vidsrc.to/embed/tv/${selectedSeries.id}/${ep.season}/${ep.number}`,
-                              post: selectedSeries.id,
-                              server: 'Servidor 1 (vidsrc.to)',
-                              lang: 'Latino / Multi-idioma',
-                              embedUrl: `https://vidsrc.to/embed/tv/${selectedSeries.id}/${ep.season}/${ep.number}`
-                            },
-                            {
-                              nume: '2',
                               type: `https://vidsrcme.ru/embed/tv?tmdb=${selectedSeries.id}&season=${ep.season}&episode=${ep.number}`,
                               post: selectedSeries.id,
-                              server: 'Servidor 2 (vidsrc.me)',
+                              server: 'Servidor 1 (vidsrc.me)',
                               lang: 'Latino / Multi-idioma',
                               embedUrl: `https://vidsrcme.ru/embed/tv?tmdb=${selectedSeries.id}&season=${ep.season}&episode=${ep.number}`
                             },
                             {
-                              nume: '3',
+                              nume: '2',
                               type: `https://www.2embed.cc/embedtv/${selectedSeries.id}&s=${ep.season}&e=${ep.number}`,
                               post: selectedSeries.id,
-                              server: 'Servidor 3 (2embed)',
+                              server: 'Servidor 2 (2embed)',
                               lang: 'Latino / Multi-idioma',
                               embedUrl: `https://www.2embed.cc/embedtv/${selectedSeries.id}&s=${ep.season}&e=${ep.number}`
+                            },
+                            {
+                              nume: '3',
+                              type: `https://multiembed.mov/?video_id=${selectedSeries.id}&tmdb=1&s=${ep.season}&e=${ep.number}`,
+                              post: selectedSeries.id,
+                              server: 'Servidor 3 (Multiembed)',
+                              lang: 'Latino / Multi-idioma',
+                              embedUrl: `https://multiembed.mov/?video_id=${selectedSeries.id}&tmdb=1&s=${ep.season}&e=${ep.number}`
+                            },
+                            {
+                              nume: '4',
+                              type: `https://vidsrc.to/embed/tv/${selectedSeries.id}/${ep.season}/${ep.number}`,
+                              post: selectedSeries.id,
+                              server: 'Servidor 4 (vidsrc.to)',
+                              lang: 'Latino / Multi-idioma',
+                              embedUrl: `https://vidsrc.to/embed/tv/${selectedSeries.id}/${ep.season}/${ep.number}`
                             }
                           ]
                         });

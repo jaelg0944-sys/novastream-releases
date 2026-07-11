@@ -208,9 +208,10 @@ export const fetchRepelisDetails = async (url) => {
     postId: tmdbId,
     description: movie ? movie.desc : '',
     options: [
-      { nume: '1', type: `https://vidsrc.to/embed/movie/${tmdbId}`, post: tmdbId, server: 'Servidor 1 (vidsrc.to)', lang: 'Latino / Multi', embedUrl: `https://vidsrc.to/embed/movie/${tmdbId}` },
-      { nume: '2', type: `https://vidsrcme.ru/embed/movie/${tmdbId}`, post: tmdbId, server: 'Servidor 2 (vidsrc.me)', lang: 'Latino / Multi', embedUrl: `https://vidsrcme.ru/embed/movie/${tmdbId}` },
-      { nume: '3', type: `https://www.2embed.cc/embed/${tmdbId}`, post: tmdbId, server: 'Servidor 3 (2embed)', lang: 'Latino / Multi', embedUrl: `https://www.2embed.cc/embed/${tmdbId}` },
+      { nume: '1', type: `https://vidsrcme.ru/embed/movie/${tmdbId}`, post: tmdbId, server: 'Servidor 1 (vidsrc.me)', lang: 'Latino / Multi', embedUrl: `https://vidsrcme.ru/embed/movie/${tmdbId}` },
+      { nume: '2', type: `https://www.2embed.cc/embed/${tmdbId}`, post: tmdbId, server: 'Servidor 2 (2embed)', lang: 'Latino / Multi', embedUrl: `https://www.2embed.cc/embed/${tmdbId}` },
+      { nume: '3', type: `https://multiembed.mov/?video_id=${tmdbId}&tmdb=1`, post: tmdbId, server: 'Servidor 3 (Multiembed)', lang: 'Latino / Multi', embedUrl: `https://multiembed.mov/?video_id=${tmdbId}&tmdb=1` },
+      { nume: '4', type: `https://vidsrc.to/embed/movie/${tmdbId}`, post: tmdbId, server: 'Servidor 4 (vidsrc.to)', lang: 'Latino / Multi', embedUrl: `https://vidsrc.to/embed/movie/${tmdbId}` },
     ]
   };
 };

@@ -40,7 +40,15 @@ export default function Player() {
 
     if (Hls.isSupported()) {
       hls = new Hls({
-        maxMaxBufferLength: 30, // Reducir buffer para live streams
+        maxBufferLength: 5,
+        maxMaxBufferLength: 10,
+        maxBufferSize: 3 * 1000 * 1000,
+        liveSyncDurationCount: 2,
+        liveMaxLatencyDurationCount: 4,
+        enableWorker: true,
+        lowLatencyMode: true,
+        backBufferLength: 0,
+        startLevel: -1,
       });
       hls.loadSource(streamUrl);
       hls.attachMedia(videoRef.current);
@@ -170,13 +178,13 @@ export default function Player() {
           </div>
         </div>
 
-        {/* Iframe de reproducción con sandbox para bloquear ventanas emergentes y publicidad invasiva */}
+        {/* Iframe de reproducción — sin sandbox para compatibilidad total con reproductores embed */}
         <iframe
           src={streamUrl}
           className="player-iframe"
-          allow="autoplay; encrypted-media; fullscreen"
+          allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
           allowFullScreen
-          sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
+          referrerPolicy="origin"
           frameBorder="0"
           style={{
             width: '100%',
