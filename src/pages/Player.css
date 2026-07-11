@@ -254,3 +254,197 @@
   50% { transform: scale(1.3); opacity: 0.7; }
   100% { transform: scale(1); opacity: 1; }
 }
+
+/* ── Loader estilo Netflix ──────────────────────────────────── */
+.netflix-loader-container {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: #000000;
+  z-index: 10005; /* Encima del iframe y controles */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  color: white;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.netflix-spinner {
+  width: 60px;
+  height: 60px;
+  border: 5px solid rgba(229, 9, 20, 0.2); /* Rojo Netflix claro */
+  border-top-color: #e50914; /* Rojo Netflix sólido */
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  box-shadow: 0 0 15px rgba(229, 9, 20, 0.4);
+}
+
+.netflix-loader-text {
+  font-size: 1.3rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  margin: 0;
+}
+
+.netflix-loader-subtitle {
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0;
+  text-align: center;
+  max-width: 80%;
+}
+
+/* ── Botón del Servidor en el Header ────────────────────────── */
+.btn-netflix-server {
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 10px 18px;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  transition: all 0.2s ease;
+}
+
+.btn-netflix-server:hover {
+  background: #e50914;
+  border-color: transparent;
+  box-shadow: 0 0 15px rgba(229, 9, 20, 0.4);
+  transform: translateY(-2px);
+}
+
+/* ── Panel de Servidores Estilo Netflix ──────────────────────── */
+.netflix-server-panel {
+  position: absolute;
+  right: 2rem;
+  top: 6rem;
+  width: 320px;
+  background: rgba(0, 0, 0, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8);
+  padding: 1.2rem;
+  z-index: 10010;
+  animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.netflix-server-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 0.8rem;
+}
+
+.netflix-server-panel-header h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+  color: white;
+}
+
+.close-panel-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.close-panel-btn:hover {
+  color: white;
+}
+
+.netflix-server-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.netflix-server-item {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: all 0.2s ease;
+}
+
+.netflix-server-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.netflix-server-item.active {
+  background: rgba(229, 9, 20, 0.15);
+  border-color: #e50914;
+}
+
+.server-dot {
+  width: 8px;
+  height: 8px;
+  background-color: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.netflix-server-item.active .server-dot {
+  background-color: #e50914;
+  box-shadow: 0 0 8px #e50914;
+}
+
+.server-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.server-name {
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.server-lang {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.75rem;
+}
+
+/* Animaciones */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

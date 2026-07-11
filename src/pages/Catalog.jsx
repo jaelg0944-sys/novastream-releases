@@ -167,7 +167,9 @@ export default function Catalog() {
             streamUrl: embedUrl,
             channelName: selectedRepelisItem.title,
             category: activeTab === 'peliculas' ? 'Películas' : 'Series',
-            isIframe: true // Forzar modo Iframe en el Player
+            isIframe: true, // Forzar modo Iframe en el Player
+            options: selectedRepelisItem.options,
+            currentOptionNume: opt.nume
           }
         });
       } else {

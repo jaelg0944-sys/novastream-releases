@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Play, Pause, Maximize, Settings, Subtitles, Volume2, VolumeX, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Play, Pause, Maximize, Settings, Subtitles, Volume2, VolumeX, AlertCircle, X } from 'lucide-react';
 import Hls from 'hls.js';
 import { ScreenOrientation } from '@capacitor/screen-orientation';
 import './Player.css';
@@ -11,10 +11,16 @@ export default function Player() {
   const videoRef = useRef(null);
   const containerRef = useRef(null);
   
-  const streamUrl = location.state?.streamUrl || '';
   const channelName = location.state?.channelName || 'Live TV';
   const channelCategory = location.state?.category || 'En Vivo';
   const isIframe = location.state?.isIframe || false;
+  const options = location.state?.options || [];
+  const currentOptionNume = location.state?.currentOptionNume || '1';
+
+  const [currentStreamUrl, setCurrentStreamUrl] = useState(location.state?.streamUrl || '');
+  const [activeOptionNume, setActiveOptionNume] = useState(currentOptionNume);
+  const [showServerMenu, setShowServerMenu] = useState(false);
+  const [isLoadingServer, setIsLoadingServer] = useState(true);
 
   const [isPlaying, setIsPlaying] = useState(true);
   const [showControls, setShowControls] = useState(true);
@@ -24,17 +30,46 @@ export default function Player() {
 
   // Detectar si la URL debe reproducirse como iframe
   const shouldUseIframe = isIframe || 
-    streamUrl.includes('.php') || 
-    streamUrl.includes('ecuaplay') || 
-    streamUrl.includes('tvhd2') ||
-    streamUrl.includes('dailymotion.com') ||
-    streamUrl.includes('youtube.com') ||
-    streamUrl.includes('vimeo.com');
+    currentStreamUrl.includes('.php') || 
+    currentStreamUrl.includes('ecuaplay') || 
+    currentStreamUrl.includes('tvhd2') ||
+    currentStreamUrl.includes('dailymotion.com') ||
+    currentStreamUrl.includes('youtube.com') ||
+    currentStreamUrl.includes('vimeo.com');
+
+  // Cada vez que cambie la URL, activamos el loading con un mínimo de 1.8 segundos para evitar parpadeos
+  useEffect(() => {
+    setIsLoadingServer(true);
+    const timer = setTimeout(() => {
+      setIsLoadingServer(false);
+    }, 1800);
+    return () => clearTimeout(timer);
+  }, [currentStreamUrl]);
+
+  // Cambiar de servidor en tiempo real sin salir del reproductor
+  const handleSwitchServer = async (opt) => {
+    setIsLoadingServer(true);
+    setShowServerMenu(false);
+    setActiveOptionNume(opt.nume);
+    try {
+      const { fetchRepelisEmbed } = await import('../services/vodService');
+      const resolved = await fetchRepelisEmbed(opt.post, opt.type, opt.nume);
+      if (resolved) {
+        setCurrentStreamUrl(resolved);
+      } else {
+        alert('Este servidor no está disponible actualmente.');
+        setIsLoadingServer(false);
+      }
+    } catch (err) {
+      console.error('Error al cambiar de servidor:', err);
+      setIsLoadingServer(false);
+    }
+  };
 
   useEffect(() => {
     // Si es un iframe, no necesitamos inicializar HLS
     if (shouldUseIframe) return;
-    if (!streamUrl || !videoRef.current) return;
+    if (!currentStreamUrl || !videoRef.current) return;
 
     let hls;
 
@@ -50,7 +85,7 @@ export default function Player() {
         backBufferLength: 0,
         startLevel: -1,
       });
-      hls.loadSource(streamUrl);
+      hls.loadSource(currentStreamUrl);
       hls.attachMedia(videoRef.current);
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         videoRef.current.play().catch(err => {
@@ -66,7 +101,7 @@ export default function Player() {
       });
     } else if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
       // Para Safari / iOS
-      videoRef.current.src = streamUrl;
+      videoRef.current.src = currentStreamUrl;
       videoRef.current.addEventListener('loadedmetadata', () => {
         videoRef.current.play().catch(err => {
           console.error("Auto-play prevented:", err);
@@ -84,7 +119,7 @@ export default function Player() {
       }
       ScreenOrientation.unlock().catch(() => {});
     };
-  }, [streamUrl, shouldUseIframe]);
+  }, [currentStreamUrl, shouldUseIframe]);
 
   // Handle Fullscreen Exit via system back or ESC
   useEffect(() => {
@@ -161,26 +196,72 @@ export default function Player() {
   // ── Modo Iframe ────────────────────────────────────────────
   if (shouldUseIframe) {
     return (
-      <div className={`player-container ${isFullscreen ? 'is-fullscreen' : ''}`} ref={containerRef}>
-        {/* Header con botón de volver */}
-        <div className="player-overlay show" style={{ pointerEvents: 'none' }}>
+      <div className={`player-container ${isFullscreen ? 'is-fullscreen' : ''}`} ref={containerRef} onMouseMove={handleMouseMove} onClick={handleMouseMove}>
+        {/* Loader estilo Netflix */}
+        {isLoadingServer && (
+          <div className="netflix-loader-container">
+            <div className="netflix-spinner"></div>
+            <p className="netflix-loader-text">Cargando película...</p>
+            <p className="netflix-loader-subtitle">{channelName}</p>
+          </div>
+        )}
+
+        {/* Header con botón de volver y cambiar servidor */}
+        <div className={`player-overlay ${showControls ? 'show' : ''}`} style={{ pointerEvents: 'none' }}>
           <div className="player-header" style={{ pointerEvents: 'auto' }}>
             <button className="icon-btn" onClick={() => navigate(-1)}>
               <ArrowLeft size={32} />
             </button>
             <div className="player-title">
               <h2>{channelName}</h2>
-              <p>{channelCategory} • Transmisión en vivo</p>
+              <p>{channelCategory} • Transmisión</p>
             </div>
-            <button className="icon-btn" onClick={toggleFullScreen} style={{ pointerEvents: 'auto' }}>
-              <Maximize size={28} />
-            </button>
+            
+            <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+              {options && options.length > 0 && (
+                <button className="btn-netflix-server" onClick={() => setShowServerMenu(!showServerMenu)}>
+                  <Settings size={20} />
+                  <span>Servidores ({activeOptionNume})</span>
+                </button>
+              )}
+              
+              <button className="icon-btn" onClick={toggleFullScreen}>
+                <Maximize size={28} />
+              </button>
+            </div>
           </div>
+
+          {/* Panel de servidores estilo Netflix glassmorphism */}
+          {showServerMenu && (
+            <div className="netflix-server-panel" style={{ pointerEvents: 'auto' }}>
+              <div className="netflix-server-panel-header">
+                <h3>Seleccionar Servidor</h3>
+                <button onClick={() => setShowServerMenu(false)} className="close-panel-btn">
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="netflix-server-list">
+                {options.map((opt, idx) => (
+                  <button
+                    key={idx}
+                    className={`netflix-server-item ${activeOptionNume === opt.nume ? 'active' : ''}`}
+                    onClick={() => handleSwitchServer(opt)}
+                  >
+                    <div className="server-dot"></div>
+                    <div className="server-info">
+                      <span className="server-name">{opt.server}</span>
+                      <span className="server-lang">{opt.lang}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Iframe de reproducción — sin sandbox para compatibilidad total con reproductores embed */}
+        {/* Iframe de reproducción */}
         <iframe
-          src={streamUrl}
+          src={currentStreamUrl}
           className="player-iframe"
           allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
           allowFullScreen
