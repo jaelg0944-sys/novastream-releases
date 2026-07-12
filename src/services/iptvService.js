@@ -6,7 +6,7 @@ import { CapacitorHttp } from '@capacitor/core';
 
 // ── Configuración ──────────────────────────────────────────
 const BRIDGE_SERVER = 'https://server-sigma-cyan.vercel.app';
-const CACHE_KEY = 'novastream_iptv_data_v64';
+const CACHE_KEY = 'novastream_iptv_data_v65';
 const CACHE_EXPIRY = 60 * 60 * 1000; // 1 hora
 
 // ── Base URL para assets locales ───────────────────────────
@@ -39,14 +39,9 @@ const CHANNELS = [
     id: 'dsports', 
     name: 'DSports (DirecTV)', 
     logo: `${BASE}/assets/dsports.png`, 
-    streamUrl: 'https://otte-qw.live.pv-cdn.net/pdx-nitro/live/clients/dash/enc/3gg2jnixjn/out/v1/e1840e01f3f14563b66bbb944d5cc54c/cenc.mpd', 
+    streamUrl: 'https://www.rojadirectaa.net/embed/eventos.html?r=aHR0cHM6Ly9sYTE2aGDuY29tL2RzcG9ydHNhci5waHA=', 
     category: 'Deportes', 
-    isDashed: true,
-    drm: {
-      clearKeys: {
-        'f8b207c10f3f76aeba32a360ec52b9e4': 'afad49d20eb39670e93e371c1d669921'
-      }
-    }
+    isIframe: true 
   },
   { id: 'rd1',  name: 'ESPN',           logo: `${BASE}/assets/espn.png`,         streamUrl: 'http://200.115.120.1:8000/play/ca040/index.m3u8', category: 'Deportes' },
   { id: 'rd2',  name: 'ESPN 2',         logo: `${BASE}/assets/espn.png`,         streamUrl: 'http://200.115.120.1:8000/play/ca041/index.m3u8', category: 'Deportes' },
