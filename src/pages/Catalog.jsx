@@ -105,29 +105,40 @@ export default function Catalog() {
   // Clic en tarjeta de catálogo
   const handleItemClick = async (item) => {
     // Caso 1: Serie local custom
-    if (item.episodes && item.episodes.length > 0) {
+    if (item.id === 'custom-asi-aprenderas') {
       setSelectedSeries(item);
       return;
     }
 
-    // Caso 2: Película o serie de Repelis24
+    // Caso 2: Película o serie dinámica (Cinemeta / Resolutor de GitHub)
     setLoadingDetail(true);
     try {
-      console.log(`[Catalog] Cargando detalles de Repelis24: ${item.title}`);
-      const details = await fetchRepelisDetails(item.url);
+      console.log(`[Catalog] Cargando detalles dinámicos: ${item.title}`);
+      const details = await fetchRepelisDetails(item.url || item.id);
       if (details) {
-        setSelectedRepelisItem({
-          ...item,
-          postId: details.postId,
-          description: details.description || item.description || 'Sin sinopsis disponible.',
-          options: details.options || []
-        });
+        if (item.type === 'series') {
+          // Mostrar modal de episodios para series
+          setSelectedSeries({
+            ...item,
+            id: details.postId || item.id,
+            description: details.description || 'Sin sinopsis disponible.',
+            episodes: details.episodes || []
+          });
+        } else {
+          // Mostrar modal de servidores directos para películas
+          setSelectedRepelisItem({
+            ...item,
+            postId: details.postId || item.id,
+            description: details.description || item.description || 'Sin sinopsis disponible.',
+            options: details.options || []
+          });
+        }
       } else {
-        alert('No se pudieron obtener las fuentes de reproducción para esta película.');
+        alert('No se pudieron obtener las fuentes de reproducción para este contenido.');
       }
     } catch (err) {
       console.error('[Catalog] Error al cargar detalles:', err);
-      alert('Error de conexión al cargar la película.');
+      alert('Error de conexión al cargar el contenido.');
     } finally {
       setLoadingDetail(false);
     }
@@ -368,52 +379,8 @@ export default function Catalog() {
                     key={idx}
                     className="episode-item"
                     onClick={() => {
-                      if (selectedSeries.id === 'custom-asi-aprenderas') {
-                        handlePlayEpisode(ep, selectedSeries.title);
-                      } else {
-                        // Catalog series: show server selection
-                        setSelectedRepelisItem({
-                          title: `${selectedSeries.title} - ${ep.title}`,
-                          poster: selectedSeries.poster,
-                          description: selectedSeries.description,
-                          year: selectedSeries.year,
-                          options: [
-                            {
-                              nume: '1',
-                              type: `https://vidsrcme.ru/embed/tv?tmdb=${selectedSeries.id}&season=${ep.season}&episode=${ep.number}`,
-                              post: selectedSeries.id,
-                              server: 'Servidor 1 (vidsrc.me)',
-                              lang: 'Latino / Multi-idioma',
-                              embedUrl: `https://vidsrcme.ru/embed/tv?tmdb=${selectedSeries.id}&season=${ep.season}&episode=${ep.number}`
-                            },
-                            {
-                              nume: '2',
-                              type: `https://www.2embed.cc/embedtv/${selectedSeries.id}&s=${ep.season}&e=${ep.number}`,
-                              post: selectedSeries.id,
-                              server: 'Servidor 2 (2embed)',
-                              lang: 'Latino / Multi-idioma',
-                              embedUrl: `https://www.2embed.cc/embedtv/${selectedSeries.id}&s=${ep.season}&e=${ep.number}`
-                            },
-                            {
-                              nume: '3',
-                              type: `https://multiembed.mov/?video_id=${selectedSeries.id}&tmdb=1&s=${ep.season}&e=${ep.number}`,
-                              post: selectedSeries.id,
-                              server: 'Servidor 3 (Multiembed)',
-                              lang: 'Latino / Multi-idioma',
-                              embedUrl: `https://multiembed.mov/?video_id=${selectedSeries.id}&tmdb=1&s=${ep.season}&e=${ep.number}`
-                            },
-                            {
-                              nume: '4',
-                              type: `https://vidsrc.to/embed/tv/${selectedSeries.id}/${ep.season}/${ep.number}`,
-                              post: selectedSeries.id,
-                              server: 'Servidor 4 (vidsrc.to)',
-                              lang: 'Latino / Multi-idioma',
-                              embedUrl: `https://vidsrc.to/embed/tv/${selectedSeries.id}/${ep.season}/${ep.number}`
-                            }
-                          ]
-                        });
-                        setSelectedSeries(null); // Cerrar modal de episodios para ver el de servidores
-                      }
+                      handlePlayEpisode(ep, selectedSeries.title);
+                      setSelectedSeries(null);
                     }}
                   >
                     <div className="episode-number">{ep.number}</div>

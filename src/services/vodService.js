@@ -1,9 +1,10 @@
 // src/services/vodService.js
-// Catálogo VOD integrado dinámicamente con el servidor en tiempo real
+// Catálogo VOD integrado con la base de datos abierta Cinemeta de GitHub/Stremio
+// Y reproductor nativo de resolución automática
 
 const BRIDGE_SERVER = 'https://server-sigma-cyan.vercel.app';
 
-// Series custom locales del usuario
+// Series custom locales del usuario (mantenidas por compatibilidad)
 export const customSeries = [
   {
     id: 'custom-asi-aprenderas',
@@ -24,105 +25,114 @@ export const customSeries = [
   }
 ];
 
-// Helper para construir episodios en series dinámicas
-function buildEpisodes(tmdbId, season, count) {
-  const eps = [];
-  for (let i = 1; i <= count; i++) {
-    eps.push({
-      number: i,
-      season: season,
-      title: `Temporada ${season} - Episodio ${i}`,
-      streamUrl: `https://vidsrcme.ru/embed/tv/${tmdbId}/${season}/${i}`,
-      isIframe: false // Se reproducirá nativamente con Hls.js
-    });
-  }
-  return eps;
-}
-
-// 1. Obtener cartelera en tiempo real (Películas o Series)
+// 1. Obtener cartelera en tiempo real desde Stremio Cinemeta (IMDb/TMDb)
 export const fetchRepelisCartelera = async (type = 'pelicula', page = 1) => {
-  const queryType = type === 'serie' ? 'serie' : 'pelicula';
+  const cTab = type === 'serie' ? 'series' : 'movie';
   try {
-    const res = await fetch(`${BRIDGE_SERVER}/api/repelis/cartelera?type=${queryType}&page=${page}`);
-    if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+    // Cinemeta devuelve páginas paginadas en formato JSON
+    const res = await fetch(`https://v3-cinemeta.strem.io/catalog/${cTab}/top/page=${page}.json`);
+    if (!res.ok) throw new Error(`Cinemeta HTTP error ${res.status}`);
     const data = await res.json();
-    return data.map(item => ({
-      id: item.url, // Usar la URL como ID único para el flujo
-      title: item.title,
-      type: item.type === 'tvshow' ? 'series' : 'movie',
-      poster: item.poster,
-      url: item.url,
+    if (!data || !data.metas) return [];
+    
+    return data.metas.map(item => ({
+      id: item.id, // IMDb ID (tt...)
+      title: item.name,
+      type: item.type === 'series' ? 'series' : 'movie',
+      poster: item.poster || `https://images.metahub.space/poster/medium/${item.id}/img`,
+      url: item.id,
       description: '',
-      rating: item.rating,
-      year: item.year,
-      genre: item.type === 'tvshow' ? 'Series' : 'Película'
+      rating: item.imdbRating || '0',
+      year: item.releaseInfo || '',
+      genre: item.type === 'series' ? 'Series' : 'Película'
     }));
   } catch (err) {
-    console.error('Error al obtener cartelera:', err);
+    console.error('Error al obtener catálogo de Cinemeta:', err);
     return [];
   }
 };
 
-// 2. Buscar películas o series en tiempo real
+// 2. Buscar películas o series en Cinemeta
 export const searchRepelis = async (query) => {
+  if (!query) return [];
   try {
-    const res = await fetch(`${BRIDGE_SERVER}/api/repelis/buscar?query=${encodeURIComponent(query)}`);
-    if (!res.ok) throw new Error(`HTTP error ${res.status}`);
-    const data = await res.json();
-    return data.map(item => ({
-      id: item.url,
-      title: item.title,
-      type: item.type === 'tvshow' ? 'series' : 'movie',
-      poster: item.poster,
-      url: item.url,
+    const [movieRes, seriesRes] = await Promise.all([
+      fetch(`https://v3-cinemeta.strem.io/catalog/movie/top/search=${encodeURIComponent(query)}.json`).then(r => r.json().catch(() => ({ metas: [] }))),
+      fetch(`https://v3-cinemeta.strem.io/catalog/series/top/search=${encodeURIComponent(query)}.json`).then(r => r.json().catch(() => ({ metas: [] })))
+    ]);
+    
+    const movies = (movieRes.metas || []).map(item => ({
+      id: item.id,
+      title: item.name,
+      type: 'movie',
+      poster: item.poster || `https://images.metahub.space/poster/medium/${item.id}/img`,
+      url: item.id,
       description: '',
-      rating: item.rating,
-      year: item.year,
-      genre: item.type === 'tvshow' ? 'Series' : 'Película'
+      rating: item.imdbRating || '0',
+      year: item.releaseInfo || '',
+      genre: 'Película'
     }));
+
+    const series = (seriesRes.metas || []).map(item => ({
+      id: item.id,
+      title: item.name,
+      type: 'series',
+      poster: item.poster || `https://images.metahub.space/poster/medium/${item.id}/img`,
+      url: item.id,
+      description: '',
+      rating: item.imdbRating || '0',
+      year: item.releaseInfo || '',
+      genre: 'Series'
+    }));
+
+    return [...movies, ...series];
   } catch (err) {
-    console.error('Error en búsqueda:', err);
+    console.error('Error en búsqueda de Cinemeta:', err);
     return [];
   }
 };
 
-// 3. Obtener detalles y opciones de reproducción en tiempo real
-export const fetchRepelisDetails = async (url) => {
+// 3. Obtener detalles y capítulos de una película/serie
+export const fetchRepelisDetails = async (imdbId) => {
   try {
-    const res = await fetch(`${BRIDGE_SERVER}/api/repelis/detalles?url=${encodeURIComponent(url)}`);
-    if (!res.ok) throw new Error(`HTTP error ${res.status}`);
-    const details = await res.json();
+    const isTv = imdbId.startsWith('tt') && (imdbId.includes(':') || await checkIfTvShow(imdbId));
+    const path = isTv ? 'series' : 'movie';
+    
+    const res = await fetch(`https://v3-cinemeta.strem.io/meta/${path}/${imdbId}.json`);
+    if (!res.ok) throw new Error(`Cinemeta Meta HTTP error ${res.status}`);
+    const data = await res.json();
+    if (!data || !data.meta) throw new Error('Detalles no disponibles');
 
-    const tmdbId = details.postId;
-    const isTv = url.includes('/serie/');
-    const type = isTv ? 'tv' : 'movie';
-
-    // Para películas, devolvemos la URL nativa directa del resolutor
-    let nativeStreamUrl = `${BRIDGE_SERVER}/api/vixsrc/resolve?tmdb=${tmdbId}&type=movie`;
+    const meta = data.meta;
     let allEpisodes = [];
 
-    // Para series, construimos los episodios en base a los datos raspados por el backend
-    if (isTv && details.episodes && details.episodes.length > 0) {
-      allEpisodes = details.episodes.map(ep => ({
-        number: ep.episode,
-        season: ep.season,
-        title: `Temporada ${ep.season} - Capítulo ${ep.episode}: ${ep.title}`,
-        // El reproductor cargará este stream nativamente en Hls.js a través del resolutor
-        streamUrl: `${BRIDGE_SERVER}/api/vixsrc/resolve?tmdb=${tmdbId}&type=tv&season=${ep.season}&episode=${ep.episode}`,
-        isIframe: false
-      }));
+    // Generar la URL de streaming nativa para películas
+    let nativeStreamUrl = `${BRIDGE_SERVER}/api/vixsrc/resolve?tmdb=${imdbId}&type=movie`;
+
+    // Si es serie, cargar todos los episodios reales de la base de datos
+    if (isTv && meta.videos && meta.videos.length > 0) {
+      // Filtrar especiales (Temporada 0) y mapear episodios reales
+      allEpisodes = meta.videos
+        .filter(ep => ep.season > 0)
+        .map(ep => ({
+          number: ep.episode || ep.number,
+          season: ep.season,
+          title: ep.name || `Capítulo ${ep.episode || ep.number}`,
+          streamUrl: `${BRIDGE_SERVER}/api/vixsrc/resolve?tmdb=${imdbId}&type=tv&season=${ep.season}&episode=${ep.episode || ep.number}`,
+          isIframe: false
+        }));
     }
 
     return {
-      postId: tmdbId,
-      description: details.description || 'Sin descripción disponible.',
+      postId: imdbId,
+      description: meta.description || 'Sin sinopsis disponible.',
       episodes: allEpisodes,
       seasons: isTv ? Array.from(new Set(allEpisodes.map(ep => ep.season))).map(s => ({ s, eps: allEpisodes.filter(e => e.season === s).length })) : null,
       options: [
         {
           nume: '1',
           type: nativeStreamUrl,
-          post: tmdbId,
+          post: imdbId,
           server: 'Reproductor Premium (Nativo)',
           lang: 'Español Latino / Multi',
           embedUrl: nativeStreamUrl
@@ -130,17 +140,27 @@ export const fetchRepelisDetails = async (url) => {
       ]
     };
   } catch (err) {
-    console.error('Error al obtener detalles:', err);
+    console.error('Error al obtener detalles de Cinemeta:', err);
     return {
-      postId: '',
+      postId: imdbId,
       description: 'Error al cargar los detalles.',
       options: []
     };
   }
 };
 
-// 4. Obtener embed URL final
+// Helper rápido para comprobar si el ID de IMDb corresponde a una serie
+async function checkIfTvShow(imdbId) {
+  try {
+    const res = await fetch(`https://v3-cinemeta.strem.io/meta/series/${imdbId}.json`);
+    const data = await res.json();
+    return !!(data && data.meta);
+  } catch {
+    return false;
+  }
+}
+
+// 4. Obtener URL final (Para compatibilidad con el reproductor)
 export const fetchRepelisEmbed = async (post, type, nume) => {
-  if (type && type.startsWith('http')) return type;
   return `${BRIDGE_SERVER}/api/vixsrc/resolve?tmdb=${post}&type=movie`;
 };
