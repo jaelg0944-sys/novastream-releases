@@ -333,11 +333,6 @@ export default function Catalog() {
                           </button>
                         );
                       })}
-                    </div>
-                    <div style={{ marginTop: '15px', padding: '10px', backgroundColor: 'rgba(255, 255, 255, 0.05)', borderRadius: '8px', fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <AlertCircle size={14} color="#ff3366" style={{ flexShrink: 0 }} />
-                      <span>Tip: Si el <b>Servidor 1</b> dice "unavailable" o no carga, prueba el <b>Servidor 2</b> o <b>Servidor 3</b> (algunos bloquean reproductores locales).</span>
-                    </div>
                   </>
                 ) : (
                   <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', textAlign: 'center', marginTop: '10px' }}>
