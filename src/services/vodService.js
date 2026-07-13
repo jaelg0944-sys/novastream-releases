@@ -104,7 +104,7 @@ export const fetchRepelisDetails = async (imdbId) => {
     let allEpisodes = [];
 
     // Generar la URL de streaming de VidLink con color personalizado NovaStream (#ff3366)
-    let streamUrl = `https://vidlink.pro/embed/movie/${imdbId}?primaryColor=ff3366&autoplay=true`;
+    let streamUrl = `https://vidlink.pro/movie/${imdbId}?primaryColor=ff3366&autoplay=true`;
 
     // Si es serie, cargar todos los episodios reales de la base de datos
     if (isTv && meta.videos && meta.videos.length > 0) {
@@ -115,7 +115,7 @@ export const fetchRepelisDetails = async (imdbId) => {
           season: ep.season,
           title: ep.name || `Capítulo ${ep.episode || ep.number}`,
           // El reproductor cargará este iframe de VidLink directamente
-          streamUrl: `https://vidlink.pro/embed/tv/${imdbId}/${ep.season}/${ep.episode || ep.number}?primaryColor=ff3366&autoplay=true`,
+          streamUrl: `https://vidlink.pro/tv/${imdbId}/${ep.season}/${ep.episode || ep.number}?primaryColor=ff3366&autoplay=true`,
           isIframe: true
         }));
     }
@@ -160,5 +160,5 @@ async function checkIfTvShow(imdbId) {
 
 // 4. Obtener URL final (Para compatibilidad con el reproductor)
 export const fetchRepelisEmbed = async (post, type, nume) => {
-  return `https://vidlink.pro/embed/movie/${post}?primaryColor=ff3366&autoplay=true`;
+  return `https://vidlink.pro/movie/${post}?primaryColor=ff3366&autoplay=true`;
 };
