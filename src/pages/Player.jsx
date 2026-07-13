@@ -434,7 +434,6 @@ export default function Player() {
         <iframe
           src={currentStreamUrl}
           className="player-iframe"
-          sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
           allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
           allowFullScreen
           referrerPolicy="origin"
