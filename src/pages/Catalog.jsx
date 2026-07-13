@@ -333,6 +333,7 @@ export default function Catalog() {
                           </button>
                         );
                       })}
+                    </div>
                   </>
                 ) : (
                   <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', textAlign: 'center', marginTop: '10px' }}>
