@@ -431,10 +431,10 @@ export default function Player() {
           )}
         </div>
 
-        {/* Iframe de reproducción */}
         <iframe
           src={currentStreamUrl}
           className="player-iframe"
+          sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
           allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
           allowFullScreen
           referrerPolicy="origin"

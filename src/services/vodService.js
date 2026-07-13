@@ -1,8 +1,6 @@
 // src/services/vodService.js
 // Catálogo VOD integrado con la base de datos abierta Cinemeta de GitHub/Stremio
-// Y reproductor nativo de resolución automática
-
-const BRIDGE_SERVER = 'https://server-sigma-cyan.vercel.app';
+// Y reproductor de resolución directa sin bloqueos de IP (VidLink)
 
 // Series custom locales del usuario (mantenidas por compatibilidad)
 export const customSeries = [
@@ -29,7 +27,6 @@ export const customSeries = [
 export const fetchRepelisCartelera = async (type = 'pelicula', page = 1) => {
   const cTab = type === 'serie' ? 'series' : 'movie';
   try {
-    // Cinemeta devuelve páginas paginadas en formato JSON
     const res = await fetch(`https://v3-cinemeta.strem.io/catalog/${cTab}/top/page=${page}.json`);
     if (!res.ok) throw new Error(`Cinemeta HTTP error ${res.status}`);
     const data = await res.json();
@@ -92,7 +89,7 @@ export const searchRepelis = async (query) => {
   }
 };
 
-// 3. Obtener detalles y capítulos de una película/serie
+// 3. Obtener detalles y capítulos de una película/serie con reproductor VidLink directo
 export const fetchRepelisDetails = async (imdbId) => {
   try {
     const isTv = imdbId.startsWith('tt') && (imdbId.includes(':') || await checkIfTvShow(imdbId));
@@ -106,20 +103,20 @@ export const fetchRepelisDetails = async (imdbId) => {
     const meta = data.meta;
     let allEpisodes = [];
 
-    // Generar la URL de streaming nativa para películas
-    let nativeStreamUrl = `${BRIDGE_SERVER}/api/vixsrc/resolve?tmdb=${imdbId}&type=movie`;
+    // Generar la URL de streaming de VidLink con color personalizado NovaStream (#ff3366)
+    let streamUrl = `https://vidlink.pro/embed/movie/${imdbId}?primaryColor=ff3366&autoplay=true`;
 
     // Si es serie, cargar todos los episodios reales de la base de datos
     if (isTv && meta.videos && meta.videos.length > 0) {
-      // Filtrar especiales (Temporada 0) y mapear episodios reales
       allEpisodes = meta.videos
         .filter(ep => ep.season > 0)
         .map(ep => ({
           number: ep.episode || ep.number,
           season: ep.season,
           title: ep.name || `Capítulo ${ep.episode || ep.number}`,
-          streamUrl: `${BRIDGE_SERVER}/api/vixsrc/resolve?tmdb=${imdbId}&type=tv&season=${ep.season}&episode=${ep.episode || ep.number}`,
-          isIframe: false
+          // El reproductor cargará este iframe de VidLink directamente
+          streamUrl: `https://vidlink.pro/embed/tv/${imdbId}/${ep.season}/${ep.episode || ep.number}?primaryColor=ff3366&autoplay=true`,
+          isIframe: true
         }));
     }
 
@@ -131,11 +128,12 @@ export const fetchRepelisDetails = async (imdbId) => {
       options: [
         {
           nume: '1',
-          type: nativeStreamUrl,
+          type: streamUrl,
           post: imdbId,
           server: 'Reproductor Premium (Nativo)',
           lang: 'Español Latino / Multi',
-          embedUrl: nativeStreamUrl
+          embedUrl: streamUrl,
+          isIframe: true
         }
       ]
     };
@@ -162,5 +160,5 @@ async function checkIfTvShow(imdbId) {
 
 // 4. Obtener URL final (Para compatibilidad con el reproductor)
 export const fetchRepelisEmbed = async (post, type, nume) => {
-  return `${BRIDGE_SERVER}/api/vixsrc/resolve?tmdb=${post}&type=movie`;
+  return `https://vidlink.pro/embed/movie/${post}?primaryColor=ff3366&autoplay=true`;
 };
