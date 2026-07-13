@@ -209,6 +209,14 @@ export default function Player() {
               }
             });
 
+            // Filtro de red para saltar CORS en dispositivos móviles proxyando a través de Vercel
+            shakaPlayer.getNetworkingEngine().registerRequestFilter((type, request) => {
+              if (request.uris[0] && request.uris[0].includes('pv-cdn.net')) {
+                const originalUrl = request.uris[0];
+                request.uris[0] = `https://server-sigma-cyan.vercel.app/proxy?url=${encodeURIComponent(originalUrl)}`;
+              }
+            });
+
             shakaPlayer.addEventListener('error', (event) => {
               console.error('Shaka Player error:', event.detail);
               setError(true);
