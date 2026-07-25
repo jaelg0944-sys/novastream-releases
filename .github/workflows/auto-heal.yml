@@ -1,0 +1,53 @@
+name: Auto-Heal IPTV Channels
+
+on:
+  schedule:
+    - cron: '0 */6 * * *' # Corre cada 6 horas automáticamente
+  workflow_dispatch: # Permite ejecutarlo manualmente desde GitHub
+
+jobs:
+  heal:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Instalar Dependencias
+        run: npm ci
+
+      - name: Ejecutar Auditoría y Auto-Reparación de Canales
+        id: auto_heal
+        run: |
+          node scripts/auto-heal-channels.js
+        continue-on-error: true # Permite capturar el código de salida
+
+      # Si el script devolvió código 0 (canales modificados), hacer commit y push a GitHub
+      - name: Hacer Commit y Push de Cambios
+        if: steps.auto_heal.outcome == 'success'
+        run: |
+          git config --global user.name "NovaStream TV Bot"
+          git config --global user.email "bot@novastream.tv"
+          git add src/services/iptvService.js
+          git commit -m "chore: auto-heal canales IPTV caídos [skip ci]"
+          git push
+
+      # Si se hizo push y tenemos secretos de Supabase, desplegar la actualización OTA para el celular
+      - name: Publicar Actualización OTA para Celulares
+        if: steps.auto_heal.outcome == 'success'
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          # Solo corre si los secretos de Supabase están configurados
+          if [ -n "$VITE_SUPABASE_URL" ] && [ -n "$VITE_SUPABASE_ANON_KEY" ]; then
+            node scripts/publish-ota.cjs
+          else
+            echo "⚠️ Secretos de Supabase no configurados. Saltando publicación OTA."
+          fi

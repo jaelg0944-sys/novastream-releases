@@ -2,6 +2,10 @@
   "appId": "com.geomar.novastreamtv",
   "appName": "NovaStream TV",
   "webDir": "dist",
+  "server": {
+    "url": "https://novastreamtv-plum.vercel.app",
+    "cleartext": true
+  },
   "plugins": {
     "CapacitorUpdater": {
       "autoUpdate": false

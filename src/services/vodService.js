@@ -23,76 +23,138 @@ export const customSeries = [
   }
 ];
 
-// 1. Obtener cartelera en tiempo real desde Stremio Cinemeta (IMDb/TMDb)
-export const fetchRepelisCartelera = async (type = 'pelicula', page = 1) => {
-  const cTab = type === 'serie' ? 'series' : 'movie';
+// 1. Obtener cartelera en tiempo real 100% desde Repelis24 vía backend (Servidor Vimeos Latino)
+export const fetchRepelisCartelera = async (type = 'pelicula', catalog = 'top', genre = '', page = 1) => {
   try {
-    const res = await fetch(`https://v3-cinemeta.strem.io/catalog/${cTab}/top/page=${page}.json`);
-    if (!res.ok) throw new Error(`Cinemeta HTTP error ${res.status}`);
+    const cType = type === 'serie' || type === 'series' ? 'tv' : 'movie';
+    const apiUrl = `https://novastream-resolver.vercel.app/api/catalog?type=${cType}&genre=${encodeURIComponent(genre)}&page=${page}`;
+    console.log('[Catalog] Obteniendo cartelera Repelis24 vía backend:', apiUrl);
+
+    const res = await fetch(apiUrl);
+    if (!res.ok) throw new Error(`Backend Catalog HTTP error ${res.status}`);
     const data = await res.json();
-    if (!data || !data.metas) return [];
-    
-    return data.metas.map(item => ({
-      id: item.id, // IMDb ID (tt...)
-      title: item.name,
-      type: item.type === 'series' ? 'series' : 'movie',
-      poster: item.poster || `https://images.metahub.space/poster/medium/${item.id}/img`,
-      url: item.id,
-      description: '',
-      rating: item.imdbRating || '0',
-      year: item.releaseInfo || '',
-      genre: item.type === 'series' ? 'Series' : 'Película'
-    }));
+
+    if (data.success && data.items && data.items.length > 0) {
+      console.log(`[Catalog] ✅ ${data.items.length} películas recibidas 100% de Repelis24 (Vimeos Latino).`);
+      return data.items;
+    }
   } catch (err) {
-    console.error('Error al obtener catálogo de Cinemeta:', err);
-    return [];
+    console.error('[Catalog] Error al obtener catálogo de Repelis24 backend:', err.message);
   }
+  return [];
 };
 
-// 2. Buscar películas o series en Cinemeta
+// 2. Buscar películas o series en Repelis24
 export const searchRepelis = async (query) => {
   if (!query) return [];
   try {
-    const [movieRes, seriesRes] = await Promise.all([
-      fetch(`https://v3-cinemeta.strem.io/catalog/movie/top/search=${encodeURIComponent(query)}.json`).then(r => r.json().catch(() => ({ metas: [] }))),
-      fetch(`https://v3-cinemeta.strem.io/catalog/series/top/search=${encodeURIComponent(query)}.json`).then(r => r.json().catch(() => ({ metas: [] })))
-    ]);
-    
-    const movies = (movieRes.metas || []).map(item => ({
-      id: item.id,
-      title: item.name,
-      type: 'movie',
-      poster: item.poster || `https://images.metahub.space/poster/medium/${item.id}/img`,
-      url: item.id,
-      description: '',
-      rating: item.imdbRating || '0',
-      year: item.releaseInfo || '',
-      genre: 'Película'
-    }));
+    const apiUrl = `https://novastream-resolver.vercel.app/api/catalog?search=${encodeURIComponent(query)}`;
+    console.log('[Catalog Search] Buscando en Repelis24:', apiUrl);
 
-    const series = (seriesRes.metas || []).map(item => ({
-      id: item.id,
-      title: item.name,
-      type: 'series',
-      poster: item.poster || `https://images.metahub.space/poster/medium/${item.id}/img`,
-      url: item.id,
-      description: '',
-      rating: item.imdbRating || '0',
-      year: item.releaseInfo || '',
-      genre: 'Series'
-    }));
+    const res = await fetch(apiUrl);
+    if (!res.ok) throw new Error(`Search API error ${res.status}`);
+    const data = await res.json();
 
-    return [...movies, ...series];
+    if (data.success && data.items) {
+      return data.items;
+    }
   } catch (err) {
-    console.error('Error en búsqueda de Cinemeta:', err);
-    return [];
+    console.error('[Catalog Search] Error en búsqueda de Repelis24:', err.message);
   }
+  return [];
 };
 
-// 3. Obtener detalles y capítulos de una película/serie con reproductor VidLink directo
-export const fetchRepelisDetails = async (imdbId) => {
+// 2b. Obtener servidores de reproducción en tiempo real para una película
+export const fetchMovieServers = async (postId) => {
+  if (!postId) return [];
   try {
-    const isTv = imdbId.startsWith('tt') && (imdbId.includes(':') || await checkIfTvShow(imdbId));
+    const apiUrl = `https://novastream-resolver.vercel.app/api/stream?post=${postId}&action=servers`;
+    console.log('[Catalog] Obteniendo servidores en tiempo real:', apiUrl);
+
+    const res = await fetch(apiUrl);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && data.servers && data.servers.length > 0) {
+        return data.servers;
+      }
+    }
+  } catch (err) {
+    console.warn('[fetchMovieServers] Error obteniendo servidores:', err.message);
+  }
+  return [];
+};
+
+// ── Proveedores de Embed para VOD ──────────────────────────
+const VOD_PROVIDERS = [
+  {
+    name: 'VidLink Premium',
+    lang: 'Multi / Latino',
+    movieUrl: (id) => `https://vidlink.pro/movie/${id}?primaryColor=ff3366&autoplay=true`,
+    tvUrl: (id, s, e) => `https://vidlink.pro/tv/${id}/${s}/${e}?primaryColor=ff3366&autoplay=true`,
+  },
+  {
+    name: 'Vidsrc Server',
+    lang: 'Multi / Subtitulado',
+    movieUrl: (id) => `https://vidsrc.cc/v2/embed/movie/${id}`,
+    tvUrl: (id, s, e) => `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}`,
+  },
+  {
+    name: 'AutoEmbed',
+    lang: 'Multi / Latino',
+    movieUrl: (id) => `https://player.autoembed.cc/embed/movie/${id}`,
+    tvUrl: (id, s, e) => `https://player.autoembed.cc/embed/tv/${id}/${s}/${e}`,
+  },
+  {
+    name: 'Embed.su',
+    lang: 'Multi / Subtitulado',
+    movieUrl: (id) => `https://embed.su/embed/movie/${id}`,
+    tvUrl: (id, s, e) => `https://embed.su/embed/tv/${id}/${s}/${e}`,
+  },
+];
+
+// 3. Obtener detalles y capítulos de una película/serie con múltiples servidores
+export const fetchRepelisDetails = async (idOrPost, typeParam, urlParam) => {
+  const imdbId = idOrPost;
+  try {
+    const isImdbId = typeof imdbId === 'string' && imdbId.startsWith('tt');
+    const isNumeric = typeof imdbId === 'string' && /^\d+$/.test(imdbId);
+    let isTv = false;
+
+    if (isImdbId) {
+      isTv = imdbId.includes(':') || await checkIfTvShow(imdbId);
+    } else if (typeParam === 'series' || typeParam === 'tv') {
+      isTv = true;
+    }
+
+    if (!isImdbId) {
+      const path = isTv ? 'series' : 'movie';
+      const fallbackId = isNumeric ? `tt${imdbId}` : imdbId;
+      let metaData = null;
+      try {
+        const res = await fetch(`https://v3-cinemeta.strem.io/meta/${path}/${fallbackId}.json`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.meta) metaData = data.meta;
+        }
+      } catch { }
+
+      return {
+        postId: imdbId,
+        description: metaData?.description || 'Sin sinopsis disponible.',
+        episodes: [],
+        seasons: null,
+        options: VOD_PROVIDERS.map((provider, idx) => ({
+          nume: String(idx + 1),
+          type: isTv ? 'tv' : 'movie',
+          post: imdbId,
+          server: provider.name,
+          lang: provider.lang,
+          embedUrl: isTv ? provider.tvUrl(fallbackId, 1, 1) : provider.movieUrl(fallbackId),
+          isIframe: true
+        }))
+      };
+    }
+
     const path = isTv ? 'series' : 'movie';
     
     const res = await fetch(`https://v3-cinemeta.strem.io/meta/${path}/${imdbId}.json`);
@@ -103,9 +165,6 @@ export const fetchRepelisDetails = async (imdbId) => {
     const meta = data.meta;
     let allEpisodes = [];
 
-    // Generar la URL de streaming de VidLink con color personalizado NovaStream (#ff3366)
-    let streamUrl = `https://vidlink.pro/movie/${imdbId}?primaryColor=ff3366&autoplay=true`;
-
     // Si es serie, cargar todos los episodios reales de la base de datos
     if (isTv && meta.videos && meta.videos.length > 0) {
       allEpisodes = meta.videos
@@ -114,28 +173,31 @@ export const fetchRepelisDetails = async (imdbId) => {
           number: ep.episode || ep.number,
           season: ep.season,
           title: ep.name || `Capítulo ${ep.episode || ep.number}`,
-          // El reproductor cargará este iframe de VidLink directamente
-          streamUrl: `https://vidlink.pro/tv/${imdbId}/${ep.season}/${ep.episode || ep.number}?primaryColor=ff3366&autoplay=true`,
+          // Usa el primer proveedor disponible como default
+          streamUrl: VOD_PROVIDERS[0].tvUrl(imdbId, ep.season, ep.episode || ep.number),
           isIframe: true
         }));
     }
+
+    // Generar opciones de servidor para cada proveedor de embed
+    const options = VOD_PROVIDERS.map((provider, idx) => ({
+      nume: String(idx + 1),
+      type: isTv ? 'tv' : 'movie',
+      post: imdbId,
+      server: provider.name,
+      lang: provider.lang,
+      embedUrl: isTv 
+        ? VOD_PROVIDERS[idx].tvUrl(imdbId, 1, 1)
+        : provider.movieUrl(imdbId),
+      isIframe: true
+    }));
 
     return {
       postId: imdbId,
       description: meta.description || 'Sin sinopsis disponible.',
       episodes: allEpisodes,
       seasons: isTv ? Array.from(new Set(allEpisodes.map(ep => ep.season))).map(s => ({ s, eps: allEpisodes.filter(e => e.season === s).length })) : null,
-      options: [
-        {
-          nume: '1',
-          type: streamUrl,
-          post: imdbId,
-          server: 'Reproductor Premium (Nativo)',
-          lang: 'Español Latino / Multi',
-          embedUrl: streamUrl,
-          isIframe: true
-        }
-      ]
+      options
     };
   } catch (err) {
     console.error('Error al obtener detalles de Cinemeta:', err);
@@ -160,5 +222,10 @@ async function checkIfTvShow(imdbId) {
 
 // 4. Obtener URL final (Para compatibilidad con el reproductor)
 export const fetchRepelisEmbed = async (post, type, nume) => {
-  return `https://vidlink.pro/movie/${post}?primaryColor=ff3366&autoplay=true`;
+  const idx = Math.max(0, parseInt(nume, 10) - 1);
+  const provider = VOD_PROVIDERS[idx] || VOD_PROVIDERS[0];
+  if (type === 'tv') {
+    return provider.tvUrl(post, 1, 1);
+  }
+  return provider.movieUrl(post);
 };

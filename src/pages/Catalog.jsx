@@ -3,13 +3,39 @@ import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import MobileHeader from '../components/MobileHeader';
 import { Play, Film, Clapperboard, Loader, AlertCircle, X, List, Search, Star } from 'lucide-react';
-import { customSeries, fetchRepelisCartelera, searchRepelis, fetchRepelisDetails, fetchRepelisEmbed } from '../services/vodService';
+import { customSeries, fetchRepelisCartelera, searchRepelis, fetchRepelisDetails, fetchMovieServers } from '../services/vodService';
+import { resolveStream } from '../services/streamResolverService';
 import './Catalog.css';
+
+const GENRES = [
+  { key: '', label: 'Todos' },
+  { key: 'Action', label: 'Acción' },
+  { key: 'Animation', label: 'Animación' },
+  { key: 'Adventure', label: 'Aventura' },
+  { key: 'Sci-Fi', label: 'Ciencia Ficción' },
+  { key: 'Comedy', label: 'Comedia' },
+  { key: 'Crime', label: 'Crimen' },
+  { key: 'Documentary', label: 'Documental' },
+  { key: 'Drama', label: 'Drama' },
+  { key: 'Family', label: 'Familia' },
+  { key: 'Fantasy', label: 'Fantasía' },
+  { key: 'History', label: 'Historia' },
+  { key: 'Mystery', label: 'Misterio' },
+  { key: 'Romance', label: 'Romance' },
+  { key: 'Thriller', label: 'Suspenso' },
+  { key: 'Horror', label: 'Terror' }
+];
 
 export default function Catalog() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(() => {
     return sessionStorage.getItem('novastream_catalog_active_tab') || 'peliculas';
+  });
+  const [activeCatalog, setActiveCatalog] = useState(() => {
+    return sessionStorage.getItem('novastream_catalog_active_catalog') || 'top';
+  });
+  const [activeGenre, setActiveGenre] = useState(() => {
+    return sessionStorage.getItem('novastream_catalog_active_genre') || '';
   });
   const [searchQuery, setSearchQuery] = useState(() => {
     return sessionStorage.getItem('novastream_catalog_search_query') || '';
@@ -25,22 +51,52 @@ export default function Catalog() {
     sessionStorage.removeItem('novastream_catalog_selected_series');
     return saved ? JSON.parse(saved) : null;
   });
-  const [selectedRepelisItem, setSelectedRepelisItem] = useState(() => {
-    const saved = sessionStorage.getItem('novastream_catalog_selected_repelis_item');
-    sessionStorage.removeItem('novastream_catalog_selected_repelis_item');
-    return saved ? JSON.parse(saved) : null;
-  });
   const [loadingDetail, setLoadingDetail] = useState(false);
-  const [resolvingEmbed, setResolvingEmbed] = useState(false);
+  const [selectedMovieForServerSelect, setSelectedMovieForServerSelect] = useState(null);
+  const [movieServers, setMovieServers] = useState([]);
+  const [loadingServers, setLoadingServers] = useState(false);
 
-  const handleCloseRepelisModal = () => {
-    setSelectedRepelisItem(null);
-    const savedSeries = sessionStorage.getItem('novastream_catalog_selected_series');
-    if (savedSeries) {
-      setSelectedSeries(JSON.parse(savedSeries));
-      sessionStorage.removeItem('novastream_catalog_selected_series');
-    }
+  // Abrir reproductor con el servidor e idioma elegido por el usuario
+  const handleLaunchPlayerWithServer = (item, nume, serverName, serverList = null) => {
+    sessionStorage.setItem('novastream_catalog_active_tab', activeTab);
+    sessionStorage.setItem('novastream_catalog_search_query', searchQuery);
+
+    const postId = item.postId || item.id;
+    const initialStreamUrl = `https://novastream-resolver.vercel.app/api/stream?post=${postId}&nume=${nume}&type=movie`;
+
+    // Construir lista de opciones para el panel de servidores del player
+    const availableServers = (serverList && serverList.length > 0 ? serverList : movieServers && movieServers.length > 0 ? movieServers : null) || [
+      { nume: '1', server: 'Vimeos (Español Latino)', lang: 'Latino', flag: '🇲🇽' },
+      { nume: '2', server: 'Streamwish (Español Latino)', lang: 'Latino', flag: '🇲🇽' },
+      { nume: '3', server: 'Filemoon (Español Latino)', lang: 'Latino', flag: '🇲🇽' },
+      { nume: '4', server: 'Vidhide (Español Latino)', lang: 'Latino', flag: '🇲🇽' },
+      { nume: '7', server: 'Streamwish (Castellano)', lang: 'Castellano', flag: '🇪🇸' },
+      { nume: '12', server: 'Streamwish (Subtitulado)', lang: 'Subtitulado', flag: '🇺🇸' },
+    ];
+
+    const playerOptions = availableServers.map(s => ({
+      nume: s.nume,
+      server: s.server,
+      lang: s.lang || s.server,
+    }));
+
+    setSelectedMovieForServerSelect(null);
+
+    navigate('/player', {
+      state: {
+        streamUrl: initialStreamUrl,
+        post: postId,
+        tmdbId: item.id,
+        currentOptionNume: String(nume),
+        channelName: item.title,
+        category: `Película (${serverName})`,
+        isIframe: false,
+        isVod: true,
+        options: playerOptions,
+      }
+    });
   };
+
 
   // Cargar cartelera
   const loadCartelera = async (tab, query = '') => {
@@ -67,7 +123,7 @@ export default function Catalog() {
       } else {
         // Cargar cartelera normal
         const type = tab === 'peliculas' ? 'pelicula' : 'serie';
-        const data = await fetchRepelisCartelera(type, 1);
+        const data = await fetchRepelisCartelera(type, activeCatalog, activeGenre, 1);
         
         if (tab === 'series') {
           // Unir series custom locales al inicio de las series de repelis
@@ -84,9 +140,14 @@ export default function Catalog() {
     }
   };
 
+  // Búsqueda instantánea en tiempo real mientras el usuario escribe
   useEffect(() => {
-    loadCartelera(activeTab, searchQuery);
-  }, [activeTab]);
+    const timer = setTimeout(() => {
+      loadCartelera(activeTab, searchQuery);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [activeTab, activeCatalog, activeGenre, searchQuery]);
 
   // Manejar el submit de la búsqueda
   const handleSearchSubmit = (e) => {
@@ -102,96 +163,70 @@ export default function Catalog() {
     loadCartelera(activeTab, '');
   };
 
-  // Clic en tarjeta de catálogo
+  // Click en ítem del catálogo
   const handleItemClick = async (item) => {
-    // Caso 1: Serie local custom
-    if (item.id === 'custom-asi-aprenderas') {
+    // Caso 1: Serie personalizada con episodios pre-cargados
+    if (item.type === 'series' && item.episodes) {
       setSelectedSeries(item);
       return;
     }
 
-    // Caso 2: Película o serie dinámica (Cinemeta / Resolutor de GitHub)
-    setLoadingDetail(true);
-    try {
-      console.log(`[Catalog] Cargando detalles dinámicos: ${item.title}`);
-      const details = await fetchRepelisDetails(item.url || item.id);
-      if (details) {
-        if (item.type === 'series') {
-          // Mostrar modal de episodios para series
-          setSelectedSeries({
-            ...item,
-            id: details.postId || item.id,
-            description: details.description || 'Sin sinopsis disponible.',
-            episodes: details.episodes || []
-          });
+    // Caso 2: Serie de Repelis24
+    if (item.type === 'series' || item.type === 'tv') {
+      setLoadingDetail(true);
+      try {
+        const details = await fetchRepelisDetails(item.id, item.type, item.url);
+        if (details && details.episodes && details.episodes.length > 0) {
+          setSelectedSeries(details);
         } else {
-          // Mostrar modal de servidores directos para películas
-          setSelectedRepelisItem({
-            ...item,
-            postId: details.postId || item.id,
-            description: details.description || item.description || 'Sin sinopsis disponible.',
-            options: details.options || []
-          });
+          handleLaunchPlayerWithServer(item, '1', 'Vimeos (Español Latino)');
         }
-      } else {
-        alert('No se pudieron obtener las fuentes de reproducción para este contenido.');
+      } catch (err) {
+        console.error('[Catalog] Error al cargar detalles:', err);
+      } finally {
+        setLoadingDetail(false);
+      }
+      return;
+    }
+
+    // Caso 3: Película → Cargar Servidores en Tiempo Real y Abrir Modal
+    const postId = item.postId || item.id;
+    setSelectedMovieForServerSelect(item);
+    setLoadingServers(true);
+    setMovieServers([]);
+    try {
+      const liveServers = await fetchMovieServers(postId);
+      if (liveServers && liveServers.length > 0) {
+        setMovieServers(liveServers);
       }
     } catch (err) {
-      console.error('[Catalog] Error al cargar detalles:', err);
-      alert('Error de conexión al cargar el contenido.');
+      console.warn('[Catalog] Error cargando servidores en vivo:', err);
     } finally {
-      setLoadingDetail(false);
+      setLoadingServers(false);
     }
   };
 
-  // Reproducir un episodio (soporta HLS directo e iframe)
-  const handlePlayEpisode = (episode, seriesTitle) => {
+  // Reproducir un episodio — Navegación INSTANTÁNEA
+  const handlePlayEpisode = async (episode, seriesTitle, seriesId) => {
     sessionStorage.setItem('novastream_catalog_selected_series', JSON.stringify(selectedSeries));
     sessionStorage.setItem('novastream_catalog_active_tab', activeTab);
     sessionStorage.setItem('novastream_catalog_search_query', searchQuery);
 
-    navigate('/player', { 
-      state: { 
+    navigate('/player', {
+      state: {
         streamUrl: episode.streamUrl,
+        seriesId: seriesId,
+        season: episode.season,
+        episode: episode.number,
         channelName: `${seriesTitle} - ${episode.title}`,
         category: 'Series',
-        isIframe: episode.isIframe || false
-      } 
+        isIframe: episode.isIframe !== false,
+        isVod: true
+      }
     });
   };
 
-  // Seleccionar servidor y reproducir en Repelis24
-  const handlePlayServer = async (opt) => {
-    setResolvingEmbed(true);
-    try {
-      console.log(`[Catalog] Resolviendo enlace embed para: ${selectedRepelisItem.title} en ${opt.server}`);
-      const embedUrl = await fetchRepelisEmbed(opt.post, opt.type, opt.nume);
-      setResolvingEmbed(false);
 
-      if (embedUrl) {
-        sessionStorage.setItem('novastream_catalog_selected_repelis_item', JSON.stringify(selectedRepelisItem));
-        sessionStorage.setItem('novastream_catalog_active_tab', activeTab);
-        sessionStorage.setItem('novastream_catalog_search_query', searchQuery);
-
-        navigate('/player', {
-          state: {
-            streamUrl: embedUrl,
-            channelName: selectedRepelisItem.title,
-            category: activeTab === 'peliculas' ? 'Películas' : 'Series',
-            isIframe: true, // Forzar modo Iframe en el Player
-            options: selectedRepelisItem.options,
-            currentOptionNume: opt.nume
-          }
-        });
-      } else {
-        alert('Este servidor no está disponible actualmente. Por favor, elige otro.');
-      }
-    } catch (err) {
-      console.error('[Catalog] Error resolviendo embed:', err);
-      setResolvingEmbed(false);
-      alert('Error al conectar con el servidor de reproducción.');
-    }
-  };
 
   return (
     <div className="app-layout">
@@ -221,6 +256,49 @@ export default function Catalog() {
               >
                 <Clapperboard size={18} /> Series
               </button>
+            </div>
+            <div className="catalog-sub-tabs">
+              <button
+                className={`catalog-sub-tab ${activeCatalog === 'top' ? 'active' : ''}`}
+                onClick={() => {
+                  setActiveCatalog('top');
+                  sessionStorage.setItem('novastream_catalog_active_catalog', 'top');
+                }}
+              >
+                Tendencias
+              </button>
+              <button
+                className={`catalog-sub-tab ${activeCatalog === 'imdbRating' ? 'active' : ''}`}
+                onClick={() => {
+                  setActiveCatalog('imdbRating');
+                  sessionStorage.setItem('novastream_catalog_active_catalog', 'imdbRating');
+                }}
+              >
+                Más Valoradas
+              </button>
+              <button
+                className={`catalog-sub-tab ${activeCatalog === 'year' ? 'active' : ''}`}
+                onClick={() => {
+                  setActiveCatalog('year');
+                  sessionStorage.setItem('novastream_catalog_active_catalog', 'year');
+                }}
+              >
+                Estrenos
+              </button>
+            </div>
+            <div className="catalog-genres-scroll">
+              {GENRES.map((g) => (
+                <button
+                  key={g.key}
+                  className={`catalog-genre-pill ${activeGenre === g.key ? 'active' : ''}`}
+                  onClick={() => {
+                    setActiveGenre(g.key);
+                    sessionStorage.setItem('novastream_catalog_active_genre', g.key);
+                  }}
+                >
+                  {g.label}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -252,6 +330,14 @@ export default function Catalog() {
             <AlertCircle size={48} color="#ff3366" />
             <p>Error de conexión al cargar la cartelera.</p>
             <button onClick={() => loadCartelera(activeTab, searchQuery)} className="btn-outline" style={{ marginTop: '10px', padding: '8px 20px', fontSize: '0.9rem' }}>Reintentar</button>
+          </div>
+        ) : items.length === 0 ? (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flex: 1, flexDirection: 'column', gap: '1rem', color: '#aaa', marginTop: '15vh' }}>
+            <Search size={48} color="#555" />
+            <p style={{ fontSize: '1.1rem', margin: 0 }}>No se encontraron {activeTab === 'peliculas' ? 'películas' : 'series'} para "{searchQuery}"</p>
+            <button onClick={handleClearSearch} className="btn-outline" style={{ padding: '10px 24px', fontSize: '0.9rem', borderRadius: '20px', background: 'linear-gradient(135deg, #ff0055, #8c00ff)', color: 'white', border: 'none', cursor: 'pointer', fontWeight: '600' }}>
+              Ver Todo el Catálogo
+            </button>
           </div>
         ) : (
           <div className="catalog-grid animate-fade-in">
@@ -289,72 +375,6 @@ export default function Catalog() {
           </div>
         )}
 
-        {/* ── Modal de Servidores (Repelis24) ── */}
-        {selectedRepelisItem && (
-          <div className="episodes-modal-backdrop" onClick={() => !resolvingEmbed && handleCloseRepelisModal()}>
-            <div className="episodes-modal" onClick={(e) => e.stopPropagation()} style={{ position: 'relative' }}>
-              
-              {resolvingEmbed && (
-                <div className="resolving-overlay">
-                  <Loader size={36} className="spin" color="#ff3366" />
-                  <p>Resolviendo enlace seguro...</p>
-                </div>
-              )}
-
-              <div className="episodes-modal-header">
-                <div className="episodes-modal-info">
-                  <img 
-                    src={selectedRepelisItem.poster || ''} 
-                    alt={selectedRepelisItem.title} 
-                    className="episodes-poster" 
-                  />
-                  <div>
-                    <h2>{selectedRepelisItem.title}</h2>
-                    <p className="episodes-desc" style={{ WebkitLineClamp: 3 }}>{selectedRepelisItem.description}</p>
-                    <span className="episodes-count">{selectedRepelisItem.year} • HD disponible</span>
-                  </div>
-                </div>
-                <button className="episodes-close" onClick={() => handleCloseRepelisModal()} disabled={resolvingEmbed}>
-                  <X size={24} />
-                </button>
-              </div>
-
-              <div className="episodes-list" style={{ padding: '20px' }}>
-                <h3 className="servers-title">Reproducir en Servidor:</h3>
-                
-                {selectedRepelisItem.options && selectedRepelisItem.options.length > 0 ? (
-                  <>
-                    <div className="servers-grid">
-                      {selectedRepelisItem.options.map((opt, idx) => {
-                        const cleanLang = opt.lang.toLowerCase();
-                        const badgeClass = cleanLang.includes('latino') ? 'latino' : cleanLang.includes('sub') ? 'subtitulado' : 'castellano';
-                        
-                        return (
-                          <button
-                            key={idx}
-                            className="server-btn"
-                            onClick={() => handlePlayServer(opt)}
-                            disabled={resolvingEmbed}
-                          >
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <Play size={12} fill="white" />
-                              {opt.server}
-                            </span>
-                            <span className={`server-lang-tag ${badgeClass}`}>{opt.lang}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </>
-                ) : (
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', textAlign: 'center', marginTop: '10px' }}>
-                    No hay servidores disponibles para este video actualmente.
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* ── Modal de episodios (Serie Custom Local) ── */}
         {selectedSeries && (
@@ -379,17 +399,126 @@ export default function Catalog() {
                     key={idx}
                     className="episode-item"
                     onClick={() => {
-                      handlePlayEpisode(ep, selectedSeries.title);
+                      handlePlayEpisode(ep, selectedSeries.title, selectedSeries.id);
                       setSelectedSeries(null);
                     }}
                   >
-                    <div className="episode-number">{ep.number}</div>
+                    <div className="episode-number">{ep.season ? `T${ep.season}:E${ep.number}` : ep.number}</div>
                     <div className="episode-info">
                       <h4>{ep.title}</h4>
                     </div>
                     <Play size={22} className="episode-play" />
                   </div>
                 ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Selección de Servidor e Idioma */}
+        {selectedMovieForServerSelect && (
+          <div className="server-modal-backdrop" onClick={() => setSelectedMovieForServerSelect(null)}>
+            <div className="server-modal-content animate-fade-in" onClick={(e) => e.stopPropagation()}>
+              <button className="server-modal-close" onClick={() => setSelectedMovieForServerSelect(null)}>
+                <X size={20} />
+              </button>
+              <div className="server-modal-header">
+                <img src={selectedMovieForServerSelect.poster} alt={selectedMovieForServerSelect.title} className="server-modal-poster" />
+                <div>
+                  <h3>{selectedMovieForServerSelect.title}</h3>
+                  <p className="server-modal-sub">Selecciona tu servidor e idioma preferido:</p>
+                </div>
+              </div>
+
+              <div className="server-modal-options" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+                {loadingServers ? (
+                  <div style={{ padding: '2rem', textAlign: 'center', color: '#aaa' }}>
+                    <Loader size={28} className="spin" color="#ff3366" style={{ margin: '0 auto 10px' }} />
+                    <p style={{ margin: 0, fontSize: '0.9rem' }}>Obteniendo servidores en tiempo real...</p>
+                  </div>
+                ) : movieServers && movieServers.length > 0 ? (
+                  movieServers.map((srv, idx) => (
+                    <button
+                      key={idx}
+                      className={`server-option-btn ${idx === 0 ? 'primary' : ''}`}
+                      onClick={() => handleLaunchPlayerWithServer(selectedMovieForServerSelect, srv.nume, srv.server)}
+                    >
+                      <span className="server-flag">{srv.flag || '🇲🇽'}</span>
+                      <div className="server-opt-text">
+                        <strong>{srv.server}</strong>
+                        <small>{idx === 0 ? 'Servidor recomendado • Alta velocidad' : `Opción ${srv.nume}`}</small>
+                      </div>
+                    </button>
+                  ))
+                ) : (
+                  <>
+                    <button
+                      className="server-option-btn primary"
+                      onClick={() => handleLaunchPlayerWithServer(selectedMovieForServerSelect, '1', 'Vimeos (Español Latino)')}
+                    >
+                      <span className="server-flag">🇲🇽</span>
+                      <div className="server-opt-text">
+                        <strong>Vimeos (Español Latino)</strong>
+                        <small>Recomendado • Alta velocidad HD</small>
+                      </div>
+                    </button>
+
+                    <button
+                      className="server-option-btn"
+                      onClick={() => handleLaunchPlayerWithServer(selectedMovieForServerSelect, '2', 'Streamwish (Español Latino)')}
+                    >
+                      <span className="server-flag">🇲🇽</span>
+                      <div className="server-opt-text">
+                        <strong>Streamwish (Español Latino)</strong>
+                        <small>Servidor 2 Latino</small>
+                      </div>
+                    </button>
+
+                    <button
+                      className="server-option-btn"
+                      onClick={() => handleLaunchPlayerWithServer(selectedMovieForServerSelect, '3', 'Filemoon (Español Latino)')}
+                    >
+                      <span className="server-flag">🇲🇽</span>
+                      <div className="server-opt-text">
+                        <strong>Filemoon (Español Latino)</strong>
+                        <small>Servidor 3 Latino</small>
+                      </div>
+                    </button>
+
+                    <button
+                      className="server-option-btn"
+                      onClick={() => handleLaunchPlayerWithServer(selectedMovieForServerSelect, '4', 'Vidhide (Español Latino)')}
+                    >
+                      <span className="server-flag">🇲🇽</span>
+                      <div className="server-opt-text">
+                        <strong>Vidhide (Español Latino)</strong>
+                        <small>Servidor 4 Latino</small>
+                      </div>
+                    </button>
+
+                    <button
+                      className="server-option-btn"
+                      onClick={() => handleLaunchPlayerWithServer(selectedMovieForServerSelect, '7', 'Streamwish (Castellano)')}
+                    >
+                      <span className="server-flag">🇪🇸</span>
+                      <div className="server-opt-text">
+                        <strong>Streamwish (Castellano)</strong>
+                        <small>Audio en Español España</small>
+                      </div>
+                    </button>
+
+                    <button
+                      className="server-option-btn"
+                      onClick={() => handleLaunchPlayerWithServer(selectedMovieForServerSelect, '12', 'Streamwish (Subtitulado)')}
+                    >
+                      <span className="server-flag">🇺🇸</span>
+                      <div className="server-opt-text">
+                        <strong>Streamwish (Subtitulado)</strong>
+                        <small>Audio original con subtítulos</small>
+                      </div>
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>

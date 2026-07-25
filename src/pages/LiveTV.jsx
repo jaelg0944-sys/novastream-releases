@@ -286,6 +286,7 @@ export default function LiveTV() {
                         id={`channel-${channel.id}`}
                         className={`channel-card ${selectedChannel?.id === channel.id ? 'selected' : ''} ${resolvingId === channel.id ? 'resolving' : ''}`}
                         onClick={() => handleChannelClick(channel)}
+                        translate="no"
                       >
                         <div className="channel-card-logo">
                           {channel.logo ? (
@@ -295,7 +296,7 @@ export default function LiveTV() {
                               loading="lazy"
                               onError={(e) => {
                                 e.target.style.display = 'none';
-                                e.target.nextSibling.style.display = 'flex';
+                                if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
                               }}
                             />
                           ) : null}
@@ -306,8 +307,8 @@ export default function LiveTV() {
                             <Tv size={28} />
                           </div>
                         </div>
-                        <div className="channel-card-info">
-                          <span className="channel-card-name">{channel.name}</span>
+                        <div className="channel-card-info" translate="no">
+                          <span className="channel-card-name" translate="no">{channel.name}</span>
                           <span className="channel-card-cat">{channel.category}</span>
                         </div>
                         {resolvingId === channel.id && (

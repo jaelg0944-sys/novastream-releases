@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Play, Pause, Maximize, Settings, Subtitles, Volume2, VolumeX, AlertCircle, X } from 'lucide-react';
+import { ArrowLeft, Play, Pause, Maximize, Settings, Volume2, VolumeX, AlertCircle, X, SkipBack, SkipForward } from 'lucide-react';
 import Hls from 'hls.js';
 import { ScreenOrientation } from '@capacitor/screen-orientation';
+import { Capacitor } from '@capacitor/core';
 import './Player.css';
 
 export default function Player() {
@@ -16,16 +17,33 @@ export default function Player() {
   const isIframe = location.state?.isIframe || false;
   const isDashed = location.state?.isDashed || false;
   const drm = location.state?.drm || null;
-  const options = location.state?.options || [];
+  const postParam = location.state?.post;
+  const defaultRepelisServers = [
+    { nume: '1', server: 'Vimeos (Español Latino)', lang: 'Latino' },
+    { nume: '2', server: 'Waaw/Netu (Español Latino)', lang: 'Latino' },
+    { nume: '3', server: 'Vimeos (Español España)', lang: 'Castellano' },
+    { nume: '4', server: 'Vimeos (Inglés Subtitulado)', lang: 'Subtitulado' },
+    { nume: '5', server: 'VidSrc (Multi-Idioma)', lang: 'Inglés/Sub' },
+  ];
+
+  const rawOptions = location.state?.options || [];
+  const options = (rawOptions && rawOptions.length > 0) ? rawOptions : defaultRepelisServers;
   const currentOptionNume = location.state?.currentOptionNume || '1';
 
+  const backups = location.state?.backups || [];
+  const [currentBackupIndex, setCurrentBackupIndex] = useState(-1);
+  const [failoverMsg, setFailoverMsg] = useState('');
+
+  const isApiUrl = (url) => url && (url.includes('/api/stream') || url.includes('/api/anime'));
+  const isInitialApiUrl = isApiUrl(location.state?.streamUrl);
+
   const [currentStreamUrl, setCurrentStreamUrl] = useState(location.state?.streamUrl || '');
-  const [resolvedStreamUrl, setResolvedStreamUrl] = useState('');
+  const [resolvedStreamUrl, setResolvedStreamUrl] = useState(location.state?.streamUrl || '');
   const [activeOptionNume, setActiveOptionNume] = useState(currentOptionNume);
   const [showServerMenu, setShowServerMenu] = useState(false);
   const [isLoadingServer, setIsLoadingServer] = useState(true);
   const [isResolvingVod, setIsResolvingVod] = useState(false);
-  const [shouldUseIframeState, setShouldUseIframeState] = useState(isIframe);
+  const [shouldUseIframeState, setShouldUseIframeState] = useState(isInitialApiUrl ? false : isIframe);
   const shakaPlayerRef = useRef(null);
 
   const [isPlaying, setIsPlaying] = useState(true);
@@ -34,6 +52,122 @@ export default function Player() {
   const [isMuted, setIsMuted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
+  // ── VOD progress state ──
+  const [isVod, setIsVod] = useState(location.state?.isVod || false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [buffered, setBuffered] = useState(0);
+  const [isSeeking, setIsSeeking] = useState(false);
+  const progressBarRef = useRef(null);
+  const controlsTimeoutRef = useRef(null);
+
+  // ── Helpers de tiempo ──
+  const formatTime = useCallback((seconds) => {
+    if (!seconds || !isFinite(seconds)) return '0:00';
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.floor(seconds % 60);
+    if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  }, []);
+
+  // ── Saltar 10 segundos ──
+  const skipForward = useCallback((e) => {
+    e.stopPropagation();
+    if (videoRef.current && isVod) {
+      videoRef.current.currentTime = Math.min(videoRef.current.currentTime + 10, videoRef.current.duration);
+    }
+  }, [isVod]);
+
+  const skipBackward = useCallback((e) => {
+    e.stopPropagation();
+    if (videoRef.current && isVod) {
+      videoRef.current.currentTime = Math.max(videoRef.current.currentTime - 10, 0);
+    }
+  }, [isVod]);
+
+  // ── Seek por click/drag en la barra de progreso ──
+  const handleProgressSeek = useCallback((e) => {
+    if (!progressBarRef.current || !videoRef.current || !isVod) return;
+    const rect = progressBarRef.current.getBoundingClientRect();
+    const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+    const percent = x / rect.width;
+    videoRef.current.currentTime = percent * videoRef.current.duration;
+  }, [isVod]);
+
+  const handleProgressMouseDown = useCallback((e) => {
+    e.stopPropagation();
+    setIsSeeking(true);
+    handleProgressSeek(e);
+  }, [handleProgressSeek]);
+
+  const handleProgressMouseMove = useCallback((e) => {
+    if (isSeeking) handleProgressSeek(e);
+  }, [isSeeking, handleProgressSeek]);
+
+  const handleProgressMouseUp = useCallback(() => {
+    setIsSeeking(false);
+  }, []);
+
+  // ── Touch seek para móviles ──
+  const handleProgressTouchStart = useCallback((e) => {
+    e.stopPropagation();
+    setIsSeeking(true);
+    const touch = e.touches[0];
+    if (!progressBarRef.current || !videoRef.current) return;
+    const rect = progressBarRef.current.getBoundingClientRect();
+    const x = Math.max(0, Math.min(touch.clientX - rect.left, rect.width));
+    videoRef.current.currentTime = (x / rect.width) * videoRef.current.duration;
+  }, []);
+
+  const handleProgressTouchMove = useCallback((e) => {
+    if (!isSeeking || !progressBarRef.current || !videoRef.current) return;
+    const touch = e.touches[0];
+    const rect = progressBarRef.current.getBoundingClientRect();
+    const x = Math.max(0, Math.min(touch.clientX - rect.left, rect.width));
+    videoRef.current.currentTime = (x / rect.width) * videoRef.current.duration;
+  }, [isSeeking]);
+
+  const handleProgressTouchEnd = useCallback(() => {
+    setIsSeeking(false);
+  }, []);
+
+  // Intentar cambiar automáticamente al siguiente stream de respaldo en caso de error
+  const triggerFailover = () => {
+    if (backups.length > 0 && currentBackupIndex < backups.length - 1) {
+      const nextIndex = currentBackupIndex + 1;
+      setCurrentBackupIndex(nextIndex);
+      const nextUrl = backups[nextIndex];
+      console.log(`[Player Failover] Signal failed. Trying backup stream ${nextIndex + 1}/${backups.length}: ${nextUrl}`);
+      setFailoverMsg(`Señal inestable. Buscando conexión de respaldo (${nextIndex + 1}/${backups.length})...`);
+      setIsLoadingServer(true);
+      setError(false);
+
+      if (shakaPlayerRef.current) {
+        try {
+          shakaPlayerRef.current.destroy();
+        } catch (e) {
+          console.warn('[Player Failover] Error destroying Shaka Player:', e);
+        }
+        shakaPlayerRef.current = null;
+      }
+
+      setCurrentStreamUrl(nextUrl);
+    } else {
+      setError(true);
+      setFailoverMsg('');
+    }
+  };
+
+  // Safety timeout: solo como último recurso si todo falla (12s)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoadingServer(false);
+      setIsResolvingVod(false);
+    }, 12000);
+    return () => clearTimeout(timer);
+  }, [currentStreamUrl]);
+
   // Efecto para interceptar y resolver enlaces VOD dinámicamente mediante el proxy
   useEffect(() => {
     let isMounted = true;
@@ -41,7 +175,48 @@ export default function Player() {
     const resolveVodUrl = async () => {
       if (!currentStreamUrl) return;
 
+      // ── CASO ANIME: el API ya devuelve la URL del iframe directamente ──
+      // NO re-resolver, ir directo al iframe con la URL del API de anime
+      if (currentStreamUrl.includes('/api/anime')) {
+        setIsResolvingVod(true);
+        setIsLoadingServer(true);
+        setError(false);
+        try {
+          console.log('[Player Anime] Resolviendo servidor de anime:', currentStreamUrl);
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 8000);
+          const response = await fetch(currentStreamUrl, { signal: controller.signal });
+          clearTimeout(timeout);
+          const data = await response.json();
+          if (data.success && data.url && isMounted) {
+            console.log('[Player Anime] ✅ Servidor extraído:', data.url.slice(0, 80));
+            setResolvedStreamUrl(data.url);
+            setShouldUseIframeState(true); // JKAnime siempre es iframe
+          } else {
+            throw new Error(data.error || 'Sin URL de servidor');
+          }
+        } catch (err) {
+          console.warn('[Player Anime] Falló, usando JKAnime directo:', err.message);
+          // Fallback: extraer slug/episode de la URL y abrir JKAnime directo
+          const urlParams = new URLSearchParams(currentStreamUrl.split('?')[1] || '');
+          const slug = urlParams.get('slug') || 'dragon-ball-super';
+          const episode = urlParams.get('episode') || '1';
+          if (isMounted) {
+            setResolvedStreamUrl(`https://jkanime.net/${slug}/${episode}/`);
+            setShouldUseIframeState(true);
+          }
+        } finally {
+          if (isMounted) {
+            setIsResolvingVod(false);
+            setIsLoadingServer(false);
+          }
+        }
+        return;
+      }
+
       const isResolvable = 
+        postParam ||
+        currentStreamUrl.includes('/api/stream') ||
         currentStreamUrl.includes('vidsrc.to/embed/movie/') || 
         currentStreamUrl.includes('vidsrc.to/embed/tv/') ||
         currentStreamUrl.includes('vidsrcme.ru/embed/movie/') ||
@@ -54,59 +229,75 @@ export default function Player() {
         setIsLoadingServer(true);
         setError(false);
 
-        let tmdbId = '';
-        let type = 'movie';
-        let season = '';
-        let episode = '';
+        let resolverApiUrl = '';
+        if (postParam) {
+          const selectedNume = activeOptionNume || currentOptionNume || '1';
+          resolverApiUrl = `https://novastream-resolver.vercel.app/api/stream?post=${postParam}&nume=${selectedNume}&type=movie`;
+        } else if (currentStreamUrl.includes('/api/stream')) {
+          resolverApiUrl = currentStreamUrl;
+        } else {
+          let tmdbId = '';
+          let type = 'movie';
+          let season = '';
+          let episode = '';
 
-        if (currentStreamUrl.includes('/movie/')) {
-          const parts = currentStreamUrl.split('/');
-          tmdbId = parts[parts.indexOf('movie') + 1]?.split('?')[0];
-          type = 'movie';
-        } else if (currentStreamUrl.includes('/tv/')) {
-          const parts = currentStreamUrl.split('/');
-          const tvIndex = parts.indexOf('tv');
-          tmdbId = parts[tvIndex + 1]?.split('?')[0];
-          season = parts[tvIndex + 2]?.split('?')[0];
-          episode = parts[tvIndex + 3]?.split('?')[0];
-          type = 'tv';
-        } else if (currentStreamUrl.includes('2embed.cc/embed/')) {
-          if (currentStreamUrl.includes('/series/')) {
+          if (currentStreamUrl.includes('/movie/')) {
             const parts = currentStreamUrl.split('/');
-            const sIndex = parts.indexOf('series');
-            tmdbId = parts[sIndex + 1];
-            season = parts[sIndex + 2];
-            episode = parts[sIndex + 3];
-            type = 'tv';
-          } else {
-            const parts = currentStreamUrl.split('/');
-            tmdbId = parts[parts.length - 1]?.split('?')[0];
+            tmdbId = parts[parts.indexOf('movie') + 1]?.split('?')[0];
             type = 'movie';
+          } else if (currentStreamUrl.includes('/tv/')) {
+            const parts = currentStreamUrl.split('/');
+            const tvIndex = parts.indexOf('tv');
+            tmdbId = parts[tvIndex + 1]?.split('?')[0];
+            season = parts[tvIndex + 2]?.split('?')[0];
+            episode = parts[tvIndex + 3]?.split('?')[0];
+            type = 'tv';
+          } else if (currentStreamUrl.includes('2embed.cc/embed/')) {
+            if (currentStreamUrl.includes('/series/')) {
+              const parts = currentStreamUrl.split('/');
+              const sIndex = parts.indexOf('series');
+              tmdbId = parts[sIndex + 1];
+              season = parts[sIndex + 2];
+              episode = parts[sIndex + 3];
+              type = 'tv';
+            } else {
+              const parts = currentStreamUrl.split('/');
+              tmdbId = parts[parts.length - 1]?.split('?')[0];
+              type = 'movie';
+            }
           }
-        } else if (currentStreamUrl.includes('/embed/')) {
-          const parts = currentStreamUrl.split('/');
-          const embedIndex = parts.indexOf('embed');
-          tmdbId = parts[embedIndex + 1]?.split('?')[0];
-          type = 'movie';
+          resolverApiUrl = `https://novastream-resolver.vercel.app/api/stream?id=${tmdbId}&type=${type}${season ? `&season=${season}` : ''}${episode ? `&episode=${episode}` : ''}`;
         }
 
         try {
-          const proxyUrl = `https://server-sigma-cyan.vercel.app/api/vixsrc/resolve?tmdb=${tmdbId}&type=${type}${season ? `&season=${season}` : ''}${episode ? `&episode=${episode}` : ''}`;
-          console.log('[Player Resolver] Resolviendo vía:', proxyUrl);
+          console.log('[Player Resolver] Resolviendo vía:', resolverApiUrl);
           
-          const response = await fetch(proxyUrl, { method: 'HEAD' });
-          if (response.ok && isMounted) {
-            console.log('[Player Resolver] ¡Señal resuelta con éxito! Cargando en Hls.js nativo.');
-            setResolvedStreamUrl(proxyUrl);
-            setShouldUseIframeState(false);
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 8000); // 8s para Vercel cold start
+
+          const response = await fetch(resolverApiUrl, { signal: controller.signal });
+          clearTimeout(timeout);
+          const data = await response.json();
+
+          if (data.success && data.url && isMounted) {
+            console.log(`[Player Resolver] ✅ Stream resuelto vía ${data.source}: ${data.url.slice(0,80)}`);
+            setResolvedStreamUrl(data.url);
+            
+            // Si es m3u8 o mp4, reproducir nativo. Si es URL de embed/iframe, usar iframe.
+            const isNativeVideo = data.url.includes('.m3u8') || data.url.includes('.mp4') || data.url.includes('/api/proxy/');
+            setShouldUseIframeState(!isNativeVideo);
           } else {
-            throw new Error(`Status ${response.status} de la API puente`);
+            throw new Error(data.message || 'No se pudo extraer stream directo');
           }
         } catch (err) {
-          console.warn('[Player Resolver] Falló la resolución dinámica de HLS. Usando iframe fallback:', err.message);
+          console.warn('[Player Resolver] Falló o expiró resolution:', err.message);
           if (isMounted) {
-            setResolvedStreamUrl(currentStreamUrl);
-            setShouldUseIframeState(true);
+            if (!isApiUrl(currentStreamUrl)) {
+              setResolvedStreamUrl(currentStreamUrl);
+              setShouldUseIframeState(true);
+            } else {
+              setError(true);
+            }
           }
         } finally {
           if (isMounted) {
@@ -122,6 +313,7 @@ export default function Player() {
           currentStreamUrl.includes('dailymotion.com') ||
           currentStreamUrl.includes('youtube.com') ||
           currentStreamUrl.includes('vimeo.com') ||
+          currentStreamUrl.includes('vimeos.net') ||
           currentStreamUrl.includes('rojadirectaa.net');
 
         if (isMounted) {
@@ -140,16 +332,28 @@ export default function Player() {
     };
   }, [currentStreamUrl]);
 
+
   // Cambiar de servidor en tiempo real sin salir del reproductor
   const handleSwitchServer = async (opt) => {
     setIsLoadingServer(true);
     setShowServerMenu(false);
     setActiveOptionNume(opt.nume);
+    const postParam = location.state?.post;
+    const tmdbId = location.state?.tmdbId;
+
     try {
-      const { fetchRepelisEmbed } = await import('../services/vodService');
-      const resolved = await fetchRepelisEmbed(opt.post, opt.type, opt.nume);
-      if (resolved) {
-        setCurrentStreamUrl(resolved);
+      let nextUrl = '';
+      if (opt.embedUrl) {
+        nextUrl = opt.embedUrl;
+      } else if (postParam) {
+        nextUrl = `https://novastream-resolver.vercel.app/api/stream?post=${postParam}&nume=${opt.nume}&type=movie`;
+      } else if (tmdbId) {
+        nextUrl = `https://novastream-resolver.vercel.app/api/stream?id=${tmdbId}&type=movie`;
+      }
+
+      if (nextUrl) {
+        console.log(`[Player] Cambiando a servidor ${opt.server} (${opt.nume}): ${nextUrl}`);
+        setCurrentStreamUrl(nextUrl);
       } else {
         alert('Este servidor no está disponible actualmente.');
         setIsLoadingServer(false);
@@ -161,8 +365,8 @@ export default function Player() {
   };
 
   useEffect(() => {
-    if (shouldUseIframeState) return;
-    if (!resolvedStreamUrl || !videoRef.current) return;
+    if (shouldUseIframeState || isResolvingVod) return;
+    if (!resolvedStreamUrl || !videoRef.current || isApiUrl(resolvedStreamUrl)) return;
 
     let hls;
 
@@ -219,7 +423,7 @@ export default function Player() {
 
             shakaPlayer.addEventListener('error', (event) => {
               console.error('Shaka Player error:', event.detail);
-              setError(true);
+              triggerFailover();
             });
 
             await shakaPlayer.load(resolvedStreamUrl);
@@ -229,52 +433,163 @@ export default function Player() {
             });
           } else {
             console.error('El navegador no soporta Shaka Player.');
-            setError(true);
+            triggerFailover();
           }
         } catch (err) {
           console.error('Error cargando DASH en Shaka Player:', err);
-          setError(true);
+          triggerFailover();
         }
         return;
       }
 
+      let rawSource = resolvedStreamUrl || currentStreamUrl;
+      const isHttpsPage = typeof window !== 'undefined' && window.location.protocol === 'https:';
+      const isNativeApp = Capacitor.isNativePlatform();
+
+      // Si el stream es de Gambeta.vip, Vimeos (requiere Referer/Origin especial) o si es HTTP en web HTTPS, usar el proxy
+      const needsProxy = rawSource.includes('gambeta.vip') || rawSource.includes('vimeos') || (!isNativeApp && rawSource.startsWith('http://') && isHttpsPage);
+
+      const finalSource = (needsProxy && !rawSource.includes('api/proxy') && !rawSource.includes('api/gambeta'))
+        ? `https://novastream-resolver.vercel.app/api/proxy?url=${encodeURIComponent(rawSource)}`
+        : rawSource;
+
       // HLS normal
       if (Hls.isSupported()) {
+        console.log('[Player] Inicializando Hls.js optimizado para:', finalSource);
         hls = new Hls({
-          maxBufferLength: 5,
-          maxMaxBufferLength: 10,
-          maxBufferSize: 3 * 1000 * 1000,
-          liveSyncDurationCount: 2,
-          liveMaxLatencyDurationCount: 4,
+          maxBufferLength: 12,             // Buffer ligero de 12s para evitar saturar la cola de descargas
+          maxMaxBufferLength: 24,          // Buffer máximo de 24s
+          maxBufferHole: 0.5,              // Tolera pequeños huecos de 0.5s sin pausar
           enableWorker: true,
-          lowLatencyMode: true,
-          backBufferLength: 0,
-          startLevel: -1,
+          lowLatencyMode: false,
+          progressive: true,
+          backBufferLength: 15,            // Mantener 15s en memoria trasera
+          startLevel: -1,                  // Auto-seleccionar calidad según velocidad
+          capLevelToPlayerSize: true,      // Ajustar resolución al tamaño del reproductor para máximo rendimiento
+          liveSyncDurationCount: 2,        // Iniciar reproducción rápido con solo 2 segmentos de buffer
+          liveMaxLatencyDurationCount: 8,  // Margen de latencia flexible
+          manifestLoadingTimeOut: 15000,
+          manifestLoadingMaxRetry: 5,
+          manifestLoadingRetryDelay: 1000,
+          levelLoadingTimeOut: 15000,
+          levelLoadingMaxRetry: 4,
+          fragLoadingTimeOut: 20000,
+          fragLoadingMaxRetry: 6,
+          fragLoadingRetryDelay: 1000,
         });
-        hls.loadSource(resolvedStreamUrl);
+        
+        hls.loadSource(finalSource);
         hls.attachMedia(videoRef.current);
+        
+        const safePlayVideo = (videoEl) => {
+          if (!videoEl) return;
+          videoEl.play()
+            .then(() => {
+              console.log('[Player] Reproducción iniciada con éxito.');
+              setIsPlaying(true);
+            })
+            .catch((err) => {
+              console.warn('[Player] Auto-play con audio prevenido por el navegador, intentando reproducción silenciada...', err.message);
+              videoEl.muted = true;
+              setIsMuted(true);
+              videoEl.play()
+                .then(() => {
+                  console.log('[Player] Reproducción silenciada iniciada con éxito.');
+                  setIsPlaying(true);
+                })
+                .catch((err2) => {
+                  console.error('[Player] Auto-play falló totalmente:', err2.message);
+                  setIsPlaying(false);
+                  setShowControls(true);
+                });
+            });
+        };
+
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          videoRef.current.play().catch(err => {
-            console.error("Auto-play prevented:", err);
-            setIsPlaying(false);
-          });
+          console.log('[Player] Manifest parsed con éxito, ocultando spinner y reproduciendo...');
+          setIsLoadingServer(false);
+          setIsResolvingVod(false);
+          safePlayVideo(videoRef.current);
         });
+        
+        let networkRetryCount = 0;
+        let mediaRetryCount = 0;
+        let stallCount = 0;
+
+        // Auto-reconectar si el video se congela (stall detection suave)
+        // Solo actúa después de 5s congelado para no interrumpir buffering normal
+        const stallTimer = setInterval(() => {
+          if (videoRef.current && !videoRef.current.paused && videoRef.current.readyState < 3) {
+            stallCount++;
+            if (stallCount >= 5) { // ~5 segundos congelado → reconectar suavemente
+              console.log(`[Player] Stream congelado ${stallCount}s, recargando buffer...`);
+              stallCount = 0;
+              // Reconexión suave: solo reiniciar la carga sin saltar posición
+              hls.startLoad(-1);
+            }
+          } else {
+            stallCount = 0;
+          }
+        }, 1000);
+
         hls.on(Hls.Events.ERROR, (event, data) => {
           if (data.fatal) {
-            console.error("HLS fatal error:", data);
-            setError(true);
+            console.error("[Player HLS Fatal Error]:", data);
+            if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+              if (networkRetryCount < 2) {
+                networkRetryCount++;
+                console.log(`[Player] Reintentando conexión de red (${networkRetryCount}/2)...`);
+                hls.startLoad();
+              } else {
+                clearInterval(stallTimer);
+                triggerFailover();
+              }
+            } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+              if (mediaRetryCount < 2) {
+                mediaRetryCount++;
+                console.log(`[Player] Recuperando error de media (${mediaRetryCount}/2)...`);
+                hls.recoverMediaError();
+              } else {
+                clearInterval(stallTimer);
+                triggerFailover();
+              }
+            } else {
+              clearInterval(stallTimer);
+              triggerFailover();
+            }
+          } else if (data.type === Hls.ErrorTypes.NETWORK_ERROR && data.details === 'fragLoadError') {
+            // Non-fatal fragment load error — auto-recover silently
+            console.warn('[Player] Fragmento perdido, recuperando silenciosamente...');
           }
         });
       } else if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
-        videoRef.current.src = resolvedStreamUrl;
+        console.log(`[Player] Cargando fuente HLS nativa en el móvil: ${finalSource}`);
+        videoRef.current.src = finalSource;
         videoRef.current.addEventListener('loadedmetadata', () => {
-          videoRef.current.play().catch(err => {
-            console.error("Auto-play prevented:", err);
-            setIsPlaying(false);
-          });
+          setIsLoadingServer(false);
+          setIsResolvingVod(false);
+          if (videoRef.current) {
+            videoRef.current.play()
+              .then(() => {
+                console.log('[Player Nativo] Reproducción iniciada con éxito.');
+                setIsPlaying(true);
+              })
+              .catch(err => {
+                console.warn('[Player Nativo] Auto-play prevenido, intentando silenciado...', err.message);
+                if (videoRef.current) {
+                  videoRef.current.muted = true;
+                  setIsMuted(true);
+                  videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {
+                    setIsPlaying(false);
+                    setShowControls(true);
+                  });
+                }
+              });
+          }
         });
-        videoRef.current.addEventListener('error', () => {
-          setError(true);
+        videoRef.current.addEventListener('error', (err) => {
+          console.error('[Player Nativo] Error de reproducción:', err);
+          triggerFailover();
         });
       }
     };
@@ -282,16 +597,20 @@ export default function Player() {
     initPlayer();
 
     return () => {
+      console.log('[Player] Destruyendo instancias de reproductor...');
       if (hls) {
         hls.destroy();
       }
+      // Clear stall timer if exists
+      const allIntervals = window.__novastreamStallTimer;
+      if (allIntervals) clearInterval(allIntervals);
       if (shakaPlayerRef.current) {
         shakaPlayerRef.current.destroy();
         shakaPlayerRef.current = null;
       }
       ScreenOrientation.unlock().catch(() => {});
     };
-  }, [resolvedStreamUrl, shouldUseIframeState]);
+  }, [resolvedStreamUrl, shouldUseIframeState, isResolvingVod]);
 
   // Handle Fullscreen Exit via system back or ESC
   useEffect(() => {
@@ -307,31 +626,96 @@ export default function Player() {
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
+  // ── Detectar VOD vs Live y trackear progreso ──
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || shouldUseIframeState) return;
+
+    // Si no es VOD (TV en Vivo), no registrar listeners de barra de progreso ni sobrescribir isVod
+    if (!isVod) return;
+
+    const onLoadedMetadata = () => {
+      const dur = video.duration;
+      if (dur && isFinite(dur) && dur > 0) {
+        setDuration(dur);
+      }
+    };
+
+    const onTimeUpdate = () => {
+      setCurrentTime(video.currentTime);
+      if (video.duration && isFinite(video.duration)) {
+        setDuration(video.duration);
+      }
+      // Buffer info
+      if (video.buffered.length > 0) {
+        setBuffered(video.buffered.end(video.buffered.length - 1));
+      }
+    };
+
+    const onDurationChange = () => {
+      if (video.duration && isFinite(video.duration) && video.duration > 0) {
+        setDuration(video.duration);
+      }
+    };
+
+    video.addEventListener('loadedmetadata', onLoadedMetadata);
+    video.addEventListener('timeupdate', onTimeUpdate);
+    video.addEventListener('durationchange', onDurationChange);
+
+    return () => {
+      video.removeEventListener('loadedmetadata', onLoadedMetadata);
+      video.removeEventListener('timeupdate', onTimeUpdate);
+      video.removeEventListener('durationchange', onDurationChange);
+    };
+  }, [resolvedStreamUrl, shouldUseIframeState, isVod]);
+
+  // Mouse/touch up global listener for seek drag
+  useEffect(() => {
+    const handleUp = () => setIsSeeking(false);
+    window.addEventListener('mouseup', handleUp);
+    window.addEventListener('touchend', handleUp);
+    return () => {
+      window.removeEventListener('mouseup', handleUp);
+      window.removeEventListener('touchend', handleUp);
+    };
+  }, []);
+
   // Auto-hide controls
   useEffect(() => {
-    if (shouldUseIframeState) return; // No auto-hide en modo iframe
-    let timeout;
-    if (isPlaying && !error) {
-      timeout = setTimeout(() => setShowControls(false), 3000);
+    if (shouldUseIframeState) return;
+    if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+    if (isPlaying && !error && !isSeeking) {
+      controlsTimeoutRef.current = setTimeout(() => setShowControls(false), 3500);
     } else {
       setShowControls(true);
     }
-    return () => clearTimeout(timeout);
-  }, [isPlaying, showControls, error, shouldUseIframeState]);
+    return () => { if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current); };
+  }, [isPlaying, showControls, error, shouldUseIframeState, isSeeking]);
 
   const handleMouseMove = () => {
     setShowControls(true);
   };
 
   const togglePlay = (e) => {
-    e.stopPropagation();
+    if (e) e.stopPropagation();
     if (videoRef.current) {
       if (isPlaying) {
         videoRef.current.pause();
+        setIsPlaying(false);
       } else {
-        videoRef.current.play();
+        videoRef.current.muted = false;
+        setIsMuted(false);
+        videoRef.current.play()
+          .then(() => {
+            setIsPlaying(true);
+          })
+          .catch((err) => {
+            console.warn('[Player] Error al dar play con audio, intentando silenciado:', err.message);
+            videoRef.current.muted = true;
+            setIsMuted(true);
+            videoRef.current.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+          });
       }
-      setIsPlaying(!isPlaying);
     }
   };
 
@@ -365,15 +749,19 @@ export default function Player() {
     }
   };
 
-  // ── Modo Iframe ────────────────────────────────────────────
-  if (shouldUseIframeState) {
+  // ── Modo Iframe Directo (Sin cortinas ni temporizadores) ───
+  const iframeSrc = resolvedStreamUrl || currentStreamUrl;
+  const isCurrentApiUrl = isApiUrl(iframeSrc);
+
+  if (shouldUseIframeState && !isResolvingVod && !isCurrentApiUrl) {
+
     return (
       <div className={`player-container ${isFullscreen ? 'is-fullscreen' : ''}`} ref={containerRef} onMouseMove={handleMouseMove} onClick={handleMouseMove}>
-        {/* Loader estilo Netflix */}
+        {/* Loader ligero mientras carga la URL */}
         {isLoadingServer && (
           <div className="netflix-loader-container">
             <div className="netflix-spinner"></div>
-            <p className="netflix-loader-text">Cargando película...</p>
+            <p className="netflix-loader-text">Cargando servidor...</p>
             <p className="netflix-loader-subtitle">{channelName}</p>
           </div>
         )}
@@ -432,12 +820,17 @@ export default function Player() {
         </div>
 
         <iframe
-          src={currentStreamUrl}
+          src={iframeSrc}
           className="player-iframe"
-          allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+          allow="autoplay *; encrypted-media *; fullscreen *; picture-in-picture *; clipboard-write; web-share"
           allowFullScreen
-          referrerPolicy="origin"
+          referrerPolicy="no-referrer-when-downgrade"
           frameBorder="0"
+          scrolling="no"
+          onLoad={() => {
+            setIsLoadingServer(false);
+            setIsResolvingVod(false);
+          }}
           style={{
             width: '100%',
             height: '100%',
@@ -459,7 +852,7 @@ export default function Player() {
         <div className="netflix-loader-container" style={{ zIndex: 10 }}>
           <div className="netflix-spinner"></div>
           <p className="netflix-loader-text">
-            {isResolvingVod ? 'Resolviendo fuente segura...' : 'Cargando película...'}
+            {failoverMsg || (isResolvingVod ? 'Resolviendo fuente segura...' : 'Cargando contenido...')}
           </p>
           <p className="netflix-loader-subtitle">{channelName}</p>
         </div>
@@ -468,9 +861,24 @@ export default function Player() {
       {error ? (
         <div className="player-error">
           <AlertCircle size={48} color="#ff3366" />
-          <h3>Señal no disponible</h3>
-          <p>El stream de este canal está caído temporalmente.</p>
-          <button className="back-btn-error" onClick={() => navigate(-1)}>Volver</button>
+          <h3>Señal Inestable o Interrumpida</h3>
+          <p>Reconectando con la transmisión en vivo...</p>
+          <div style={{ display: 'flex', gap: '12px', marginTop: '15px' }}>
+            <button
+              className="btn-primary"
+              style={{ padding: '10px 20px', fontSize: '0.9rem' }}
+              onClick={() => { setError(false); setIsLoadingServer(true); window.location.reload(); }}
+            >
+              Reintentar Conexión
+            </button>
+            <button
+              className="btn-outline"
+              style={{ borderRadius: '20px', padding: '10px 20px', fontSize: '0.9rem' }}
+              onClick={() => navigate(-1)}
+            >
+              Volver a Canales
+            </button>
+          </div>
         </div>
       ) : (
         <video 
@@ -496,22 +904,66 @@ export default function Player() {
             <div style={{ width: 32 }}></div>
           </div>
 
-          {/* Center Play/Pause Overlay */}
+          {/* Center Play/Pause + Skip Controls */}
           <div className="player-center">
+            {isVod && (
+              <button className="skip-btn skip-back" onClick={skipBackward} title="Retroceder 10s">
+                <SkipBack size={32} />
+                <span className="skip-label">10</span>
+              </button>
+            )}
             <button 
               className="play-pause-huge" 
               onClick={togglePlay}
             >
               {isPlaying ? <Pause size={64} /> : <Play fill="currentColor" size={64} />}
             </button>
+            {isVod && (
+              <button className="skip-btn skip-forward" onClick={skipForward} title="Adelantar 10s">
+                <SkipForward size={32} />
+                <span className="skip-label">10</span>
+              </button>
+            )}
           </div>
 
           {/* Bottom Controls */}
           <div className="player-footer">
-            <div className="progress-container live-indicator">
-              <div className="live-dot"></div>
-              <span>EN VIVO</span>
-            </div>
+            {isVod ? (
+              /* ── Barra de progreso estilo Netflix para VOD ── */
+              <div className="vod-progress-wrapper">
+                <span className="vod-time">{formatTime(currentTime)}</span>
+                <div
+                  className="vod-progress-bar"
+                  ref={progressBarRef}
+                  onMouseDown={handleProgressMouseDown}
+                  onMouseMove={handleProgressMouseMove}
+                  onMouseUp={handleProgressMouseUp}
+                  onTouchStart={handleProgressTouchStart}
+                  onTouchMove={handleProgressTouchMove}
+                  onTouchEnd={handleProgressTouchEnd}
+                >
+                  {/* Buffer bar */}
+                  <div
+                    className="vod-progress-buffered"
+                    style={{ width: duration > 0 ? `${(buffered / duration) * 100}%` : '0%' }}
+                  />
+                  {/* Progress bar */}
+                  <div
+                    className="vod-progress-fill"
+                    style={{ width: duration > 0 ? `${(currentTime / duration) * 100}%` : '0%' }}
+                  >
+                    <div className="vod-progress-thumb" />
+                  </div>
+                </div>
+                <span className="vod-time">{formatTime(duration - currentTime)}</span>
+              </div>
+            ) : (
+              /* ── Indicador EN VIVO para live ── */
+              <div className="progress-container live-indicator">
+                <div className="live-dot"></div>
+                <span>EN VIVO</span>
+              </div>
+            )}
 
             <div className="controls-row">
               <div className="controls-left">
@@ -524,7 +976,12 @@ export default function Player() {
               </div>
 
               <div className="controls-right">
-                <button className="icon-btn"><Settings size={28} /></button>
+                {isVod && options && options.length > 0 && (
+                  <button className="btn-netflix-server" onClick={() => setShowServerMenu(!showServerMenu)}>
+                    <Settings size={20} />
+                    <span>Servidores ({activeOptionNume})</span>
+                  </button>
+                )}
                 <button className="icon-btn" onClick={toggleFullScreen}><Maximize size={28} /></button>
               </div>
             </div>

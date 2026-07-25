@@ -9,15 +9,16 @@ export default function Sidebar() {
     { name: 'Inicio', icon: Home, path: '/home' },
     { name: 'TV en Vivo', icon: Tv, path: '/live' },
     { name: 'Catálogo', icon: Film, path: '/catalog' },
+    { name: 'Animes', icon: Clapperboard, path: '/anime' },
     { name: 'Deportes', icon: MonitorPlay, path: '/sports' },
     { name: 'Favoritos', icon: Heart, path: '/favorites' },
   ];
 
-  // Only essential items for mobile bottom bar (4 items max for better fit)
   const mobileMenuItems = [
     { name: 'Inicio', icon: Home, path: '/home' },
     { name: 'TV en Vivo', icon: Tv, path: '/live' },
     { name: 'Catálogo', icon: Film, path: '/catalog' },
+    { name: 'Animes', icon: Clapperboard, path: '/anime' },
     { name: 'Ajustes', icon: Settings, path: '/settings' },
   ];
 

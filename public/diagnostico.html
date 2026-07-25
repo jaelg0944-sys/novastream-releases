@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>NovaStream - Diagnóstico TV en Vivo</title>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <style>
+    body { background: #111; color: #fff; font-family: monospace; padding: 20px; }
+    video { width: 640px; height: 360px; background: #000; border: 2px solid #333; }
+    .log { background: #000; padding: 10px; margin: 10px 0; max-height: 300px; overflow-y: auto; font-size: 12px; border: 1px solid #333; }
+    .ok { color: #0f0; } .err { color: #f33; } .warn { color: #ff0; }
+    button { background: #ff3366; color: #fff; border: none; padding: 8px 16px; cursor: pointer; margin: 4px; border-radius: 4px; }
+    button:hover { background: #e02050; }
+    h2 { color: #ff3366; }
+  </style>
+</head>
+<body>
+  <h1>🔬 NovaStream - Diagnóstico de Reproductores en Vivo</h1>
+  
+  <h2>Selecciona un canal para probar:</h2>
+  <div id="buttons"></div>
+  
+  <h2>Reproductor de Video:</h2>
+  <video id="video" controls autoplay muted playsinline></video>
+  
+  <h2>Log de Diagnóstico:</h2>
+  <div class="log" id="log"></div>
+
+  <script>
+    const channels = [
+      { name: 'Ecuavisa (HTTPS HLS)', url: 'https://dai.google.com/linear/hls/event/GyPkTVDZSXGhpOvxPK7m2g/master.m3u8' },
+      { name: 'Teleamazonas (HTTPS HLS)', url: 'https://teleamazonas-live.cdn.vustreams.com/live/fd4ab346-b4e3-4628-abf0-b5a1bc192428/live.isml/fd4ab346-b4e3-4628-abf0-b5a1bc192428.m3u8' },
+      { name: 'Oromar TV (HTTPS HLS)', url: 'https://stream.oromar.tv/hls/oromartv_hi/index.m3u8' },
+      { name: 'TVC (HTTPS HLS)', url: 'https://library-getafix.fireclip.tv/56e2d24bfdcf13ab4a321867/live/live_1.m3u8' },
+      { name: 'La 1 España (HTTPS HLS)', url: 'https://rtvelivestream.rtve.es/rtvesec/la1/la1_main_dvr.m3u8' },
+      { name: 'ESPN 1 (HTTP HLS)', url: 'http://200.115.120.1:8000/play/ca040/index.m3u8' },
+      { name: 'RTS (HTTP HLS)', url: 'http://179.60.51.134:8888/RTS/index.m3u8' },
+      { name: 'Canela Kids (HTTPS HLS)', url: 'https://amg00658-amg00658c47-canelatv-international-7222.playouts.now.amagi.tv/playlist/amg00658-canelamediafast-canelakids-canelatvinternational/playlist.m3u8' },
+    ];
+
+    const logEl = document.getElementById('log');
+    const videoEl = document.getElementById('video');
+    const buttonsEl = document.getElementById('buttons');
+    let currentHls = null;
+
+    function log(msg, cls = '') {
+      const d = new Date().toLocaleTimeString();
+      logEl.innerHTML += `<div class="${cls}">[${d}] ${msg}</div>`;
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function testChannel(ch) {
+      logEl.innerHTML = '';
+      log(`=== PROBANDO: ${ch.name} ===`);
+      log(`URL: ${ch.url}`);
+
+      // Cleanup previous
+      if (currentHls) { currentHls.destroy(); currentHls = null; }
+      videoEl.src = '';
+      videoEl.removeAttribute('src');
+
+      // Check if HTTP on HTTPS page
+      if (ch.url.startsWith('http://') && window.location.protocol === 'https:') {
+        log('⚠️ MIXED CONTENT DETECTADO: Esta página es HTTPS pero el stream es HTTP.', 'warn');
+        log('⚠️ El navegador BLOQUEARÁ este stream por política de seguridad de contenido mixto.', 'warn');
+        log('⚠️ Este canal SOLO funciona en la app móvil nativa (Android) o en Electron con insecure=true.', 'warn');
+      }
+
+      if (Hls.isSupported()) {
+        log('✅ Hls.js está soportado en este navegador.', 'ok');
+        
+        const hls = new Hls({
+          maxBufferLength: 10,
+          maxMaxBufferLength: 30,
+          enableWorker: true,
+          lowLatencyMode: true,
+          debug: false,
+        });
+        currentHls = hls;
+
+        hls.on(Hls.Events.MEDIA_ATTACHED, () => {
+          log('✅ Hls.js: Media attached al elemento <video>.', 'ok');
+        });
+
+        hls.on(Hls.Events.MANIFEST_LOADING, () => {
+          log('⏳ Hls.js: Cargando manifiesto M3U8...');
+        });
+
+        hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
+          log(`✅ Hls.js: Manifiesto parseado con éxito! ${data.levels.length} niveles de calidad encontrados.`, 'ok');
+          log(`✅ Niveles: ${data.levels.map(l => l.width + 'x' + l.height + ' @ ' + Math.round(l.bitrate/1000) + 'kbps').join(', ')}`, 'ok');
+          
+          videoEl.muted = true;
+          videoEl.play()
+            .then(() => log('✅ Reproducción iniciada con éxito (muted).', 'ok'))
+            .catch(err => log('❌ Error al reproducir: ' + err.message, 'err'));
+        });
+
+        hls.on(Hls.Events.FRAG_LOADED, (event, data) => {
+          log(`✅ Fragmento cargado: ${data.frag.sn} (${Math.round(data.frag.duration)}s)`, 'ok');
+        });
+
+        hls.on(Hls.Events.ERROR, (event, data) => {
+          if (data.fatal) {
+            log(`❌ ERROR FATAL Hls.js: type=${data.type}, details=${data.details}`, 'err');
+            log(`❌ Razón: ${data.reason || 'desconocida'}`, 'err');
+            if (data.response) {
+              log(`❌ HTTP Status: ${data.response.code}`, 'err');
+            }
+          } else {
+            log(`⚠️ Error no-fatal Hls.js: ${data.details}`, 'warn');
+          }
+        });
+
+        log('⏳ Llamando hls.loadSource()...');
+        hls.loadSource(ch.url);
+        log('⏳ Llamando hls.attachMedia()...');
+        hls.attachMedia(videoEl);
+
+      } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
+        log('ℹ️ Hls.js NO soportado. Usando HLS nativo del navegador (Safari/iOS).', 'warn');
+        videoEl.src = ch.url;
+        videoEl.addEventListener('loadedmetadata', () => {
+          log('✅ HLS Nativo: Metadata cargada.', 'ok');
+          videoEl.muted = true;
+          videoEl.play().catch(err => log('❌ Error al reproducir nativo: ' + err.message, 'err'));
+        });
+        videoEl.addEventListener('error', () => {
+          log('❌ HLS Nativo: Error al cargar.', 'err');
+        });
+      } else {
+        log('❌ Este navegador NO soporta Hls.js ni HLS nativo.', 'err');
+      }
+    }
+
+    // Create buttons
+    channels.forEach(ch => {
+      const btn = document.createElement('button');
+      btn.textContent = ch.name;
+      btn.onclick = () => testChannel(ch);
+      buttonsEl.appendChild(btn);
+    });
+
+    log('Página de diagnóstico lista. Haz clic en un canal para probarlo.');
+    log(`Protocolo de esta página: ${window.location.protocol}`);
+    log(`Hls.js soportado: ${Hls.isSupported()}`);
+    log(`HLS nativo soportado: ${videoEl.canPlayType('application/vnd.apple.mpegurl') ? 'Sí' : 'No'}`);
+  </script>
+</body>
+</html>
