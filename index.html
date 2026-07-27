@@ -1,10 +1,21 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
-    <title>novastream_tv</title>
+    <title>NovaStream TV</title>
+    <script>
+      // Anti-Popup & Anti-Ad Redirect Interceptor
+      (function() {
+        try {
+          window.open = function() {
+            console.warn('[Anti-Popup] Interceptado y bloqueado intento de abrir ventana emergente');
+            return null;
+          };
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
