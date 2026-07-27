@@ -31,9 +31,16 @@
             return el;
           };
 
-          // 3. Evitar que la página cambie de foco o pierda la navegación por anuncios
-          window.addEventListener('beforeunload', function(e) {
-            // Previene redirecciones automáticas no deseadas del marco principal
+          // 3. Si la ventana pierde el foco por un intento de popup, reenfocar NovaStream TV automáticamente
+          let isBlurring = false;
+          window.addEventListener('blur', function() {
+            if (!isBlurring) {
+              isBlurring = true;
+              setTimeout(function() {
+                window.focus();
+                isBlurring = false;
+              }, 100);
+            }
           });
         } catch (e) {}
       })();

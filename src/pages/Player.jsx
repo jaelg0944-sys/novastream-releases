@@ -841,18 +841,24 @@ export default function Player() {
             zIndex: 1,
           }}
         />
-        {/* Escudo Anti-Clic de Anuncios: absorbe el primer clic (siempre es del anuncio) */}
+        {/* Escudo Anti-Clic Inteligente Multi-Evento */}
         <div
           className="ad-click-shield"
+          onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+          onMouseUp={(e) => { e.preventDefault(); e.stopPropagation(); }}
+          onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); }}
+          onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); }}
+          onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+          onPointerUp={(e) => { e.preventDefault(); e.stopPropagation(); }}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            // Desactivar el escudo por 3 segundos para dejar pasar el clic real al video
+            // Desactivar el escudo temporalmente por 4 segundos para permitir controlar la película
             const shield = e.currentTarget;
             shield.style.pointerEvents = 'none';
             setTimeout(() => {
-              shield.style.pointerEvents = 'auto';
-            }, 3000);
+              if (shield) shield.style.pointerEvents = 'auto';
+            }, 4000);
           }}
           style={{
             position: 'absolute',
