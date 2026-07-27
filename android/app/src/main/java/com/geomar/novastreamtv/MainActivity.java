@@ -4,7 +4,10 @@ import android.os.Bundle;
 import android.view.View;
 import android.view.WindowManager;
 import android.webkit.WebView;
+import android.webkit.WebResourceRequest;
 import com.getcapacitor.BridgeActivity;
+import com.getcapacitor.BridgeWebViewClient;
+import com.getcapacitor.BridgeWebChromeClient;
 
 public class MainActivity extends BridgeActivity {
 
@@ -19,6 +22,37 @@ public class MainActivity extends BridgeActivity {
         WebView webView = getBridge().getWebView();
         if (webView != null) {
             webView.getSettings().setMediaPlaybackRequiresUserGesture(false);
+
+            // Bloquear la creación de ventanas emergentes (popups) de publicidad
+            webView.getSettings().setSupportMultipleWindows(true);
+            webView.getSettings().setJavaScriptCanOpenWindowsAutomatically(false);
+
+            // Personalizar WebChromeClient para descartar popups
+            webView.setWebChromeClient(new BridgeWebChromeClient(getBridge()) {
+                @Override
+                public boolean onCreateWindow(WebView view, boolean isDialog, boolean isUserGesture, android.os.Message resultMsg) {
+                    android.util.Log.d("NovaStreamTV", "Popup bloqueado en WebChromeClient");
+                    return false; // Retornar false previene la creación del popup
+                }
+            });
+
+            // Personalizar WebViewClient para bloquear redirecciones de la app a sitios de anuncios
+            webView.setWebViewClient(new BridgeWebViewClient(getBridge()) {
+                @Override
+                public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                    String url = request.getUrl().toString();
+                    // Si se intenta navegar la ventana principal a un dominio externo no permitido
+                    if (request.isForMainFrame() && 
+                        !url.contains("novastreamtv-plum.vercel.app") && 
+                        !url.contains("localhost") && 
+                        !url.contains("127.0.0.1") &&
+                        !url.startsWith("capacitor://")) {
+                        android.util.Log.d("NovaStreamTV", "Redirección de ventana principal bloqueada: " + url);
+                        return true; // Bloquear la navegación
+                    }
+                    return super.shouldOverrideUrlLoading(view, request);
+                }
+            });
         }
     }
 
