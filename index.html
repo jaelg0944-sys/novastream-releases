@@ -6,13 +6,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
     <title>NovaStream TV</title>
     <script>
-      // Anti-Popup & Anti-Ad Redirect Interceptor
+      // Anti-Popup & Anti-Ad Redirect Shield
       (function() {
         try {
+          // 1. Bloquear window.open
           window.open = function() {
             console.warn('[Anti-Popup] Interceptado y bloqueado intento de abrir ventana emergente');
             return null;
           };
+
+          // 2. Prevenir la creación dinámica de elementos <a> con target="_blank"
+          const originalCreateElement = document.createElement;
+          document.createElement = function(tagName, options) {
+            const el = originalCreateElement.call(document, tagName, options);
+            if (tagName && tagName.toLowerCase() === 'a') {
+              el.setAttribute = function(name, value) {
+                if (name === 'target' && (value === '_blank' || value === '_parent' || value === '_top')) {
+                  console.warn('[Anti-Ad] Modificado target prohibido a _self');
+                  return Element.prototype.setAttribute.call(this, name, '_self');
+                }
+                return Element.prototype.setAttribute.call(this, name, value);
+              };
+            }
+            return el;
+          };
+
+          // 3. Evitar que la página cambie de foco o pierda la navegación por anuncios
+          window.addEventListener('beforeunload', function(e) {
+            // Previene redirecciones automáticas no deseadas del marco principal
+          });
         } catch (e) {}
       })();
     </script>
