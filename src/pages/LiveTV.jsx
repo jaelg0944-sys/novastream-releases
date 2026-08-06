@@ -5,6 +5,7 @@ import MobileHeader from '../components/MobileHeader';
 import { Play, Heart, AlertCircle, Loader, Tv } from 'lucide-react';
 import { fetchIPTVData, resolveStream } from '../services/iptvService';
 import { Browser } from '@capacitor/browser';
+import { toast } from '../components/Toast';
 import './LiveTV.css';
 
 export default function LiveTV() {
@@ -17,12 +18,24 @@ export default function LiveTV() {
   const [error, setError] = useState(false);
   const [selectedChannel, setSelectedChannel] = useState(null);
   const [resolvingId, setResolvingId] = useState(null);
+  const [favorites, setFavorites] = useState(() => JSON.parse(localStorage.getItem('nova_favorites') || '[]'));
+
+  useEffect(() => {
+    localStorage.setItem('nova_favorites', JSON.stringify(favorites));
+  }, [favorites]);
+
+  const toggleFavorite = (channelId) => {
+    setFavorites(prev => {
+      if (prev.includes(channelId)) return prev.filter(id => id !== channelId);
+      return [...prev, channelId];
+    });
+  };
 
   // Caché temporal de URLs pre-resueltas
   const [preResolvedCache, setPreResolvedCache] = useState({});
 
   const categories = [
-    'Todos', 'Nacionales', 'Deportes', 'Cine', 'Series', 'Novelas',
+    'Todos', 'Favoritos', 'Nacionales', 'Deportes', 'Cine', 'Series', 'Novelas',
     'Anime', 'Infantil', 'Noticias', 'Música', 'Comedia', 'Reality',
     'Documentales', 'Entretenimiento', 'Retro', 'Estilo de Vida'
   ];
@@ -111,6 +124,8 @@ export default function LiveTV() {
   // Filtrar canales por categoría activa
   const activeChannels = activeCategory === 'Todos'
     ? channels
+    : activeCategory === 'Favoritos'
+    ? channels.filter(c => favorites.includes(c.id))
     : channels.filter(c => c.category === activeCategory);
 
   // ── Reproducir canal ───────────────────────────────────────
@@ -183,7 +198,7 @@ export default function LiveTV() {
     } catch (err) {
       console.error('Error al reproducir canal en tiempo real:', err);
       setResolvingId(null);
-      alert('No se pudo conectar a la señal de este canal. Por favor, inténtalo de nuevo.');
+      toast.error('No se pudo conectar a la señal de este canal. Por favor, inténtalo de nuevo.');
     }
   };
 
@@ -243,8 +258,12 @@ export default function LiveTV() {
                       </>
                     )}
                   </button>
-                  <button className="btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px' }}>
-                    <Heart size={20} />
+                  <button 
+                    className="btn-outline" 
+                    onClick={() => selectedChannel && toggleFavorite(selectedChannel.id)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px', color: selectedChannel && favorites.includes(selectedChannel.id) ? '#ff3366' : 'inherit' }}
+                  >
+                    <Heart size={20} fill={selectedChannel && favorites.includes(selectedChannel.id) ? "#ff3366" : "none"} />
                   </button>
                 </div>
               </div>
@@ -255,6 +274,8 @@ export default function LiveTV() {
                   {categories.map(cat => {
                     const count = cat === 'Todos'
                       ? channels.length
+                      : cat === 'Favoritos'
+                      ? channels.filter(c => favorites.includes(c.id)).length
                       : channels.filter(c => c.category === cat).length;
 
                     // No mostrar categorías vacías (excepto "Todos")
@@ -267,7 +288,7 @@ export default function LiveTV() {
                         onClick={() => {
                           setActiveCategory(cat);
                           sessionStorage.setItem('novastream_active_category', cat);
-                          const newChannels = cat === 'Todos' ? channels : channels.filter(c => c.category === cat);
+                          const newChannels = cat === 'Todos' ? channels : cat === 'Favoritos' ? channels.filter(c => favorites.includes(c.id)) : channels.filter(c => c.category === cat);
                           if (newChannels.length > 0) setSelectedChannel(newChannels[0]);
                         }}
                       >

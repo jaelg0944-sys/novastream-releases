@@ -12,8 +12,16 @@ export default function Settings() {
   const navigate = useNavigate();
   const [userEmail, setUserEmail] = useState('');
   const [userName, setUserName] = useState('');
-  const [autoPlay, setAutoPlay] = useState(true);
-  const [quality, setQuality] = useState('auto');
+  const [autoPlay, setAutoPlay] = useState(() => localStorage.getItem('nova_autoplay') !== 'false');
+  const [quality, setQuality] = useState(() => localStorage.getItem('nova_quality') || 'auto');
+
+  useEffect(() => {
+    localStorage.setItem('nova_autoplay', autoPlay);
+  }, [autoPlay]);
+
+  useEffect(() => {
+    localStorage.setItem('nova_quality', quality);
+  }, [quality]);
   const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {

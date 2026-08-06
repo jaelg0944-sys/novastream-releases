@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Welcome from './pages/Welcome';
 import Login from './pages/Login';
 import Home from './pages/Home';
@@ -39,9 +39,9 @@ function AppRoutes() {
       <Route path="/settings" element={<Settings />} />
       <Route path="/catalog" element={<Catalog />} />
       <Route path="/anime" element={<Anime />} />
-      <Route path="/search" element={<NotFound />} />
-      <Route path="/sports" element={<NotFound />} />
-      <Route path="/favorites" element={<NotFound />} />
+      <Route path="/search" element={<Navigate to="/catalog" />} />
+      <Route path="/sports" element={<Navigate to="/live" />} />
+      <Route path="/favorites" element={<Navigate to="/catalog" />} />
     </Routes>
   );
 }

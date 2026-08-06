@@ -168,7 +168,6 @@ async function tryBridgeResolver(imdbId, type, season, episode) {
 // Consulta addons públicos del ecosistema Stremio que devuelven URLs directas
 const STREMIO_ADDONS = [
   'https://vidsrc-addon.vercel.app',
-  'https://stremio-vidsrc.herokuapp.com',
 ];
 
 async function tryStremioAddons(imdbId, type, season, episode) {

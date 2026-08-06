@@ -4,6 +4,7 @@ import { ArrowLeft, Play, Pause, Maximize, Settings, Volume2, VolumeX, AlertCirc
 import Hls from 'hls.js';
 import { ScreenOrientation } from '@capacitor/screen-orientation';
 import { Capacitor } from '@capacitor/core';
+import { toast } from '../components/Toast';
 import './Player.css';
 
 export default function Player() {
@@ -60,6 +61,7 @@ export default function Player() {
   const [isSeeking, setIsSeeking] = useState(false);
   const progressBarRef = useRef(null);
   const controlsTimeoutRef = useRef(null);
+  const stallTimerRef = useRef(null);
 
   // ── Helpers de tiempo ──
   const formatTime = useCallback((seconds) => {
@@ -164,7 +166,7 @@ export default function Player() {
     const timer = setTimeout(() => {
       setIsLoadingServer(false);
       setIsResolvingVod(false);
-    }, 12000);
+    }, 20000);
     return () => clearTimeout(timer);
   }, [currentStreamUrl]);
 
@@ -355,7 +357,7 @@ export default function Player() {
         console.log(`[Player] Cambiando a servidor ${opt.server} (${opt.nume}): ${nextUrl}`);
         setCurrentStreamUrl(nextUrl);
       } else {
-        alert('Este servidor no está disponible actualmente.');
+        toast.error('Este servidor no está disponible actualmente.');
         setIsLoadingServer(false);
       }
     } catch (err) {
@@ -459,22 +461,22 @@ export default function Player() {
         hls = new Hls({
           maxBufferLength: 12,             // Buffer ligero de 12s para evitar saturar la cola de descargas
           maxMaxBufferLength: 24,          // Buffer máximo de 24s
-          maxBufferHole: 0.5,              // Tolera pequeños huecos de 0.5s sin pausar
+          maxBufferHole: 0.3,              // Tolera pequeños huecos de 0.5s sin pausar
           enableWorker: true,
           lowLatencyMode: false,
           progressive: true,
           backBufferLength: 15,            // Mantener 15s en memoria trasera
           startLevel: -1,                  // Auto-seleccionar calidad según velocidad
           capLevelToPlayerSize: true,      // Ajustar resolución al tamaño del reproductor para máximo rendimiento
-          liveSyncDurationCount: 2,        // Iniciar reproducción rápido con solo 2 segmentos de buffer
+          liveSyncDurationCount: 3,        // Iniciar reproducción rápido con solo 2 segmentos de buffer
           liveMaxLatencyDurationCount: 8,  // Margen de latencia flexible
           manifestLoadingTimeOut: 15000,
           manifestLoadingMaxRetry: 5,
           manifestLoadingRetryDelay: 1000,
           levelLoadingTimeOut: 15000,
           levelLoadingMaxRetry: 4,
-          fragLoadingTimeOut: 20000,
-          fragLoadingMaxRetry: 6,
+          fragLoadingTimeOut: 25000,
+          fragLoadingMaxRetry: 8,
           fragLoadingRetryDelay: 1000,
         });
         
@@ -518,7 +520,7 @@ export default function Player() {
 
         // Auto-reconectar si el video se congela (stall detection suave)
         // Solo actúa después de 5s congelado para no interrumpir buffering normal
-        const stallTimer = setInterval(() => {
+        stallTimerRef.current = setInterval(() => {
           if (videoRef.current && !videoRef.current.paused && videoRef.current.readyState < 3) {
             stallCount++;
             if (stallCount >= 5) { // ~5 segundos congelado → reconectar suavemente
@@ -541,7 +543,7 @@ export default function Player() {
                 console.log(`[Player] Reintentando conexión de red (${networkRetryCount}/2)...`);
                 hls.startLoad();
               } else {
-                clearInterval(stallTimer);
+                clearInterval(stallTimerRef.current);
                 triggerFailover();
               }
             } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
@@ -550,11 +552,11 @@ export default function Player() {
                 console.log(`[Player] Recuperando error de media (${mediaRetryCount}/2)...`);
                 hls.recoverMediaError();
               } else {
-                clearInterval(stallTimer);
+                clearInterval(stallTimerRef.current);
                 triggerFailover();
               }
             } else {
-              clearInterval(stallTimer);
+              clearInterval(stallTimerRef.current);
               triggerFailover();
             }
           } else if (data.type === Hls.ErrorTypes.NETWORK_ERROR && data.details === 'fragLoadError') {
@@ -602,8 +604,9 @@ export default function Player() {
         hls.destroy();
       }
       // Clear stall timer if exists
-      const allIntervals = window.__novastreamStallTimer;
-      if (allIntervals) clearInterval(allIntervals);
+      if (stallTimerRef.current) {
+        clearInterval(stallTimerRef.current);
+      }
       if (shakaPlayerRef.current) {
         shakaPlayerRef.current.destroy();
         shakaPlayerRef.current = null;

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { PlayCircle, Mail, Lock, User, ArrowLeft } from 'lucide-react';
 import { supabase } from '../supabaseClient';
+import { toast } from '../components/Toast';
 import './Login.css';
 
 export default function Login() {
@@ -60,7 +61,7 @@ export default function Login() {
         if (error) throw error;
         
         // Success
-        alert("Registro exitoso. Revisa tu correo para verificar tu cuenta.");
+        toast.success("Registro exitoso. Revisa tu correo para verificar tu cuenta.");
         setIsLogin(true);
       }
     } catch (err) {

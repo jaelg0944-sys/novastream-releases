@@ -5,6 +5,7 @@ import { Play, Info, Loader, AlertCircle, Heart, Tv } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { fetchIPTVData, resolveStream } from '../services/iptvService';
 import { Browser } from '@capacitor/browser';
+import { toast } from '../components/Toast';
 import './Home.css';
 
 export default function Home() {
@@ -66,7 +67,7 @@ export default function Home() {
       } catch (err) {
         console.error('[Home] Error resolviendo stream:', err);
         setResolvingId(null);
-        alert('No se pudo conectar a la señal en vivo. Por favor, intenta de nuevo.');
+        toast.error('No se pudo conectar a la señal en vivo. Por favor, intenta de nuevo.');
       }
     } else {
       // Enlace directo
