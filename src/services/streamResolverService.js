@@ -3,8 +3,10 @@
 // Intenta obtener URLs directas de video (HLS/MP4) para reproducción nativa
 // Si falla, devuelve null y el catálogo usa iframe como fallback transparente
 
-const BRIDGE_SERVER = 'https://novastream-resolver.vercel.app';
-const NOVA_RESOLVER = 'https://novastream-resolver.vercel.app';
+import { BACKEND_URL } from './config';
+
+const BRIDGE_SERVER = BACKEND_URL;
+const NOVA_RESOLVER = BACKEND_URL;
 const RESOLVE_TIMEOUT = 8000; // 8 segundos máximo para resolver
 
 // ── Cache local persistente ────────────────────────────────

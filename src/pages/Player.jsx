@@ -5,6 +5,7 @@ import Hls from 'hls.js';
 import { ScreenOrientation } from '@capacitor/screen-orientation';
 import { Capacitor } from '@capacitor/core';
 import { toast } from '../components/Toast';
+import { BACKEND_URL } from '../services/config';
 import './Player.css';
 
 export default function Player() {
@@ -13,7 +14,7 @@ export default function Player() {
   const videoRef = useRef(null);
   const containerRef = useRef(null);
   
-  const channelName = location.state?.channelName || 'Live TV';
+  const channelName = location.state?.channelName || location.state?.title || 'NovaStream TV';
   const channelCategory = location.state?.category || 'En Vivo';
   const isIframe = location.state?.isIframe || false;
   const isDashed = location.state?.isDashed || false;
@@ -161,7 +162,7 @@ export default function Player() {
     }
   };
 
-  // Safety timeout: solo como último recurso si todo falla (12s)
+  // Safety timeout: solo como último recurso si todo falla (20s)
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsLoadingServer(false);
@@ -419,7 +420,7 @@ export default function Player() {
             shakaPlayer.getNetworkingEngine().registerRequestFilter((type, request) => {
               if (request.uris[0] && request.uris[0].includes('pv-cdn.net')) {
                 const originalUrl = request.uris[0];
-                request.uris[0] = `https://server-sigma-cyan.vercel.app/proxy?url=${encodeURIComponent(originalUrl)}`;
+                request.uris[0] = `${BACKEND_URL}/api/proxy?url=${encodeURIComponent(originalUrl)}`;
               }
             });
 

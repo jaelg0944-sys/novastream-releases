@@ -117,7 +117,7 @@ export default function Home() {
                   <button className="btn-primary" onClick={() => handlePlay(featured)} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Play fill="currentColor" size={20} /> Reproducir
                   </button>
-                  <button className="btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button className="btn-outline" onClick={() => navigate('/catalog')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Info size={20} /> Más Info
                   </button>
                 </div>
@@ -132,7 +132,7 @@ export default function Home() {
                     <div key={item.id} className="carousel-item" onClick={() => handlePlay(item)}>
                       <img src={item.logo} alt={item.name} />
                       <div className="item-overlay">
-                        <Play className="play-icon" size={40} />
+                        {resolvingId === item.id ? <Loader className="spin" size={40} /> : <Play className="play-icon" size={40} />}
                       </div>
                       <div style={{ position: 'absolute', bottom: 10, left: 10, right: 10, background: 'rgba(0,0,0,0.8)', padding: '5px', borderRadius: '4px', textAlign: 'center', fontSize: '0.9rem', fontWeight: 'bold' }}>
                          {item.name}
@@ -150,7 +150,7 @@ export default function Home() {
                       <div key={item.id} className="carousel-item" onClick={() => handlePlay(item)}>
                         <img src={item.logo} alt={item.name} />
                         <div className="item-overlay">
-                          <Play className="play-icon" size={40} />
+                          {resolvingId === item.id ? <Loader className="spin" size={40} /> : <Play className="play-icon" size={40} />}
                         </div>
                         <div style={{ position: 'absolute', bottom: 10, left: 10, right: 10, background: 'rgba(0,0,0,0.8)', padding: '5px', borderRadius: '4px', textAlign: 'center', fontSize: '0.9rem', fontWeight: 'bold' }}>
                            {item.name}

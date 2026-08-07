@@ -76,7 +76,7 @@ export default function Settings() {
         {/* Subscription Section */}
         <div className="settings-section animate-fade-in">
           <div className="section-title">
-            <Crown size={20} /> Suscripción
+            <Crown size={20} /> Suscripción <span style={{fontSize: '0.7rem', background: '#ff3366', padding: '2px 6px', borderRadius: '4px', marginLeft: '8px'}}>Modo Demo / Ejemplo</span>
           </div>
 
           <div className="settings-row">

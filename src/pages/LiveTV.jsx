@@ -332,6 +332,13 @@ export default function LiveTV() {
                           <span className="channel-card-name" translate="no">{channel.name}</span>
                           <span className="channel-card-cat">{channel.category}</span>
                         </div>
+                        <button 
+                          className="favorite-grid-btn"
+                          onClick={(e) => { e.stopPropagation(); toggleFavorite(channel.id); }}
+                          style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(0,0,0,0.5)', border: 'none', color: favorites.includes(channel.id) ? '#ff3366' : 'white', cursor: 'pointer', padding: '6px', borderRadius: '50%', display: 'flex' }}
+                        >
+                          <Heart size={16} fill={favorites.includes(channel.id) ? "#ff3366" : "none"} />
+                        </button>
                         {resolvingId === channel.id && (
                           <div className="channel-card-loading">
                             <Loader size={20} className="spin" />

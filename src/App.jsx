@@ -41,7 +41,8 @@ function AppRoutes() {
       <Route path="/anime" element={<Anime />} />
       <Route path="/search" element={<Navigate to="/catalog" />} />
       <Route path="/sports" element={<Navigate to="/live" />} />
-      <Route path="/favorites" element={<Navigate to="/catalog" />} />
+      <Route path="/favorites" element={<Navigate to="/live" replace />} />
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 }
