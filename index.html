@@ -6,43 +6,162 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
     <title>NovaStream TV</title>
     <script>
-      // Anti-Popup & Anti-Ad Redirect Shield
+      // ══════════════════════════════════════════════════════════
+      // NovaStream TV — Escudo Anti-Anuncios v3.0 (Completo)
+      // Bloquea: popups, redirecciones, ventanas emergentes,
+      //          overlays de anuncios, scripts de ad networks
+      // ══════════════════════════════════════════════════════════
       (function() {
+        'use strict';
         try {
-          // 1. Bloquear window.open
-          window.open = function() {
-            console.warn('[Anti-Popup] Interceptado y bloqueado intento de abrir ventana emergente');
-            return null;
-          };
+          // ── 1. Bloquear window.open de forma PERMANENTE (no se puede re-asignar) ──
+          var noop = function() { return null; };
+          try {
+            Object.defineProperty(window, 'open', {
+              value: noop, writable: false, configurable: false
+            });
+          } catch(e) { window.open = noop; }
 
-          // 2. Prevenir la creación dinámica de elementos <a> con target="_blank"
-          const originalCreateElement = document.createElement;
-          document.createElement = function(tagName, options) {
-            const el = originalCreateElement.call(document, tagName, options);
-            if (tagName && tagName.toLowerCase() === 'a') {
-              el.setAttribute = function(name, value) {
-                if (name === 'target' && (value === '_blank' || value === '_parent' || value === '_top')) {
-                  console.warn('[Anti-Ad] Modificado target prohibido a _self');
-                  return Element.prototype.setAttribute.call(this, name, '_self');
+          // ── 2. Lista negra de dominios de publicidad conocidos ──
+          var AD_DOMAINS = [
+            'doubleclick.net','googlesyndication.com','googleadservices.com',
+            'adservice.google.com','pagead2.googlesyndication.com',
+            'popads.net','popcash.net','propellerads.com','pushnotificationapi.com',
+            'adsterra.com','exoclick.com','trafficjunky.com','juicyads.com',
+            'clickadu.com','hilltopads.net','richpush.com','adcash.com',
+            'admaven.com','evadav.com','monetag.com','onclicka.com',
+            'vooservers.com','tsyndicate.com','a-ads.com','ad-maven.com',
+            'popunder.net','popmyads.com','clickaine.com','revcontent.com',
+            'mgid.com','taboola.com','outbrain.com','zergnet.com',
+            'revenuehits.com','bidvertiser.com','yllix.com',
+            'pushground.com','pushwoosh.com','onesignal.com',
+            'notix.io','sendpulse.com','gravitec.net',
+            'adrunnr.com','adpushup.com','setupad.com',
+          ];
+
+          function isAdUrl(url) {
+            if (!url || typeof url !== 'string') return false;
+            var lower = url.toLowerCase();
+            for (var i = 0; i < AD_DOMAINS.length; i++) {
+              if (lower.indexOf(AD_DOMAINS[i]) !== -1) return true;
+            }
+            // Bloquear patrones comunes de ads
+            if (/\/(ads?|banner|popup|popunder|click|track(er|ing)?)\//i.test(url)) return true;
+            if (/\.(bid|click|top|xyz|buzz)\//i.test(url)) return true;
+            return false;
+          }
+
+          // ── 3. Interceptar createElement para neutralizar <a>, <iframe>, <script> de ads ──
+          var _createElement = document.createElement.bind(document);
+          document.createElement = function(tag, opts) {
+            var el = _createElement(tag, opts);
+            if (!tag) return el;
+            var t = tag.toLowerCase();
+
+            if (t === 'a') {
+              // Forzar target=_self en todos los enlaces dinámicos
+              var _setAttr = el.setAttribute.bind(el);
+              el.setAttribute = function(n, v) {
+                if (n === 'target' && v !== '_self') return _setAttr(n, '_self');
+                if (n === 'href' && isAdUrl(v)) { return; }
+                return _setAttr(n, v);
+              };
+              // Interceptar .target directo
+              try {
+                Object.defineProperty(el, 'target', {
+                  get: function() { return '_self'; },
+                  set: function() {}
+                });
+              } catch(e) {}
+            }
+
+            if (t === 'iframe') {
+              // Interceptar src de iframes de publicidad
+              var _iSetAttr = el.setAttribute.bind(el);
+              el.setAttribute = function(n, v) {
+                if (n === 'src' && isAdUrl(v)) {
+                  console.warn('[AdBlock] iframe de ad bloqueado:', v);
+                  return;
                 }
-                return Element.prototype.setAttribute.call(this, name, value);
+                return _iSetAttr(n, v);
               };
             }
+
+            if (t === 'script') {
+              var _sSetAttr = el.setAttribute.bind(el);
+              el.setAttribute = function(n, v) {
+                if (n === 'src' && isAdUrl(v)) {
+                  console.warn('[AdBlock] script de ad bloqueado:', v);
+                  return;
+                }
+                return _sSetAttr(n, v);
+              };
+            }
+
             return el;
           };
 
-          // 3. Si la ventana pierde el foco por un intento de popup, reenfocar NovaStream TV automáticamente
-          let isBlurring = false;
-          window.addEventListener('blur', function() {
-            if (!isBlurring) {
-              isBlurring = true;
-              setTimeout(function() {
-                window.focus();
-                isBlurring = false;
-              }, 100);
+          // ── 4. MutationObserver: eliminar elementos de ad inyectados en el DOM ──
+          var observer = new MutationObserver(function(mutations) {
+            for (var i = 0; i < mutations.length; i++) {
+              var nodes = mutations[i].addedNodes;
+              for (var j = 0; j < nodes.length; j++) {
+                var node = nodes[j];
+                if (node.nodeType !== 1) continue;
+                // Eliminar iframes de publicidad
+                if (node.tagName === 'IFRAME' && node.src && isAdUrl(node.src)) {
+                  node.remove();
+                  continue;
+                }
+                // Eliminar scripts de publicidad
+                if (node.tagName === 'SCRIPT' && node.src && isAdUrl(node.src)) {
+                  node.remove();
+                  continue;
+                }
+                // Eliminar divs con estilos de overlay sospechosos (popups fullscreen)
+                if (node.tagName === 'DIV' && node.style) {
+                  var s = node.style;
+                  if (s.position === 'fixed' && s.zIndex > 9000 &&
+                      (s.width === '100%' || s.width === '100vw') &&
+                      node.id !== 'root' && !node.closest('#root')) {
+                    console.warn('[AdBlock] Overlay de ad eliminado');
+                    node.remove();
+                  }
+                }
+              }
             }
           });
-        } catch (e) {}
+          observer.observe(document.documentElement, { childList: true, subtree: true });
+
+          // ── 5. Bloquear redirecciones de navegación ──
+          // Interceptar location.assign y location.replace
+          var _assign = location.assign;
+          var _replace = location.replace;
+          location.assign = function(url) {
+            if (isAdUrl(url)) { console.warn('[AdBlock] Redirección bloqueada:', url); return; }
+            return _assign.call(location, url);
+          };
+          location.replace = function(url) {
+            if (isAdUrl(url)) { console.warn('[AdBlock] Redirección bloqueada:', url); return; }
+            return _replace.call(location, url);
+          };
+
+          // ── 6. Re-enfoque automático si un anuncio roba el foco ──
+          var blurring = false;
+          window.addEventListener('blur', function() {
+            if (!blurring) {
+              blurring = true;
+              setTimeout(function() { window.focus(); blurring = false; }, 100);
+            }
+          });
+
+          // ── 7. Bloquear beforeunload forzados por anuncios ──
+          window.addEventListener('beforeunload', function(e) {
+            // Prevenir que ads cancelen la navegación del usuario
+          }, true);
+
+          console.log('[NovaStream] Escudo Anti-Anuncios v3.0 activo ✅');
+        } catch (e) { console.error('[AdBlock] Error:', e); }
       })();
     </script>
   </head>
