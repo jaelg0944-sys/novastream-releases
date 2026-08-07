@@ -480,11 +480,11 @@ export default function Player() {
       const isHttpsPage = typeof window !== 'undefined' && window.location.protocol === 'https:';
       const isNativeApp = Capacitor.isNativePlatform();
 
-      // Si el stream es de Gambeta.vip, Vimeos (requiere Referer/Origin especial) o si es HTTP en web HTTPS, usar el proxy
-      const needsProxy = rawSource.includes('gambeta.vip') || rawSource.includes('vimeos') || (!isNativeApp && rawSource.startsWith('http://') && isHttpsPage);
+      // Si el stream es de Gambeta.vip, Vimeos (requiere Referer/Origin especial) o si es HTTP (evitar Mixed Content / Cleartext block), usar el proxy
+      const needsProxy = rawSource.includes('gambeta.vip') || rawSource.includes('vimeos') || rawSource.startsWith('http://');
 
       const finalSource = (needsProxy && !rawSource.includes('api/proxy') && !rawSource.includes('api/gambeta'))
-        ? `https://novastream-resolver.vercel.app/api/proxy?url=${encodeURIComponent(rawSource)}`
+        ? `${BACKEND_URL}/api/proxy?url=${encodeURIComponent(rawSource)}`
         : rawSource;
 
       // HLS normal
