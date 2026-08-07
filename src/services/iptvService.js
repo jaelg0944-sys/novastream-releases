@@ -15,7 +15,7 @@ const BASE = '';
 // ── Lista de Canales Estáticos (Ll) ────────────────────────
 const CHANNELS = [
   // ─── Nacionales Ecuador ───
-  { id: 'ec1',  name: 'Ecuavisa',       logo: `${BASE}/assets/ecuavisa.png`,    streamUrl: 'https://novastream-resolver.vercel.app/api/proxy?url=http%3A%2F%2F45.171.108.253%3A8888%2FECUAVISA%2Findex.m3u8', category: 'Nacionales' },
+  { id: 'ec1',  name: 'Ecuavisa',       logo: `${BASE}/assets/ecuavisa.png`,    streamUrl: 'http://45.171.108.253:8888/ECUAVISA/index.m3u8', category: 'Nacionales', backups: ['https://redirector.rudo.video/hls-video/c54ac2799874375c81c1672abb700870537c5223/ecuavisa/ecuavisa.smil/playlist_dvr.m3u8', 'http://45.224.97.181:9999/Ecuavisa/index.m3u8', 'http://179.60.51.134:8888/ECUAVISA/index.m3u8'] },
   { id: 'ec2',  name: 'Teleamazonas',   logo: `${BASE}/assets/teleamazonas.png`, streamUrl: 'https://teleamazonas-live.cdn.vustreams.com/live/fd4ab346-b4e3-4628-abf0-b5a1bc192428/live.isml/fd4ab346-b4e3-4628-abf0-b5a1bc192428.m3u8', category: 'Nacionales' },
   { id: 'ec3',  name: 'Oromar TV',      logo: `${BASE}/assets/oromartv.png`,     streamUrl: 'https://stream.oromar.tv/hls/oromartv_hi/index.m3u8', category: 'Nacionales' },
   { id: 'ec4',  name: 'TVC',            logo: `${BASE}/assets/tvc.png`,          streamUrl: 'https://library-getafix.fireclip.tv/56e2d24bfdcf13ab4a321867/live/live_1.m3u8', category: 'Nacionales' },
