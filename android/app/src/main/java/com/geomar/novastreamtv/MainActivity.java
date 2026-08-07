@@ -63,12 +63,24 @@ public class MainActivity extends BridgeActivity {
             webView.getSettings().setSupportMultipleWindows(true);
             webView.getSettings().setJavaScriptCanOpenWindowsAutomatically(false);
 
-            // Personalizar WebChromeClient para descartar popups
+            // Personalizar WebChromeClient para descartar popups completamente
             webView.setWebChromeClient(new BridgeWebChromeClient(getBridge()) {
                 @Override
                 public boolean onCreateWindow(WebView view, boolean isDialog, boolean isUserGesture, android.os.Message resultMsg) {
-                    android.util.Log.d("NovaStreamTV", "Popup bloqueado en WebChromeClient");
-                    return false; // Retornar false previene la creación del popup
+                    android.util.Log.d("NovaStreamTV", "Popup/Nueva ventana anulada completamente");
+                    if (resultMsg != null) {
+                        try {
+                            WebView.WebViewTransport transport = (WebView.WebViewTransport) resultMsg.obj;
+                            if (transport != null) {
+                                WebView dummyWebView = new WebView(view.getContext());
+                                transport.setWebView(dummyWebView);
+                                resultMsg.sendToTarget();
+                            }
+                        } catch (Exception e) {
+                            android.util.Log.e("NovaStreamTV", "Error al anular popup transport", e);
+                        }
+                    }
+                    return true; // Devuelve true tras consumir el transporte
                 }
             });
 

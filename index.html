@@ -155,12 +155,31 @@
             }
           });
 
-          // ── 7. Bloquear beforeunload forzados por anuncios ──
+          // ── 7. Captura de clicks globales para detener _blank o dominios de ads ──
+          window.addEventListener('click', function(e) {
+            var target = e.target;
+            while (target && target !== document.body && target !== document.documentElement) {
+              if (target.tagName === 'A') {
+                var href = target.getAttribute('href');
+                var targetAttr = target.getAttribute('target');
+                if (targetAttr === '_blank' || (href && isAdUrl(href))) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  e.stopImmediatePropagation();
+                  console.warn('[AdBlock] Clic en enlace _blank/anuncio bloqueado:', href);
+                  return false;
+                }
+              }
+              target = target.parentElement;
+            }
+          }, true);
+
+          // ── 8. Bloquear beforeunload forzados por anuncios ──
           window.addEventListener('beforeunload', function(e) {
             // Prevenir que ads cancelen la navegación del usuario
           }, true);
 
-          console.log('[NovaStream] Escudo Anti-Anuncios v3.0 activo ✅');
+          console.log('[NovaStream] Escudo Anti-Anuncios v3.1 activo ✅');
         } catch (e) { console.error('[AdBlock] Error:', e); }
       })();
     </script>

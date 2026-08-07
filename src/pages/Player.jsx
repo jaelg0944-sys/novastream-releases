@@ -828,6 +828,7 @@ export default function Player() {
           className="player-iframe"
           allow="autoplay *; encrypted-media *; fullscreen *; picture-in-picture *; clipboard-write; web-share"
           allowFullScreen
+          sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
           referrerPolicy="no-referrer-when-downgrade"
           frameBorder="0"
           scrolling="no"
