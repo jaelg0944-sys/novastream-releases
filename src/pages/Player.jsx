@@ -179,7 +179,6 @@ export default function Player() {
       if (!currentStreamUrl) return;
 
       // ── CASO ANIME: el API ya devuelve la URL del iframe directamente ──
-      // NO re-resolver, ir directo al iframe con la URL del API de anime
       if (currentStreamUrl.includes('/api/anime')) {
         setIsResolvingVod(true);
         setIsLoadingServer(true);
@@ -194,19 +193,51 @@ export default function Player() {
           if (data.success && data.url && isMounted) {
             console.log('[Player Anime] ✅ Servidor extraído:', data.url.slice(0, 80));
             setResolvedStreamUrl(data.url);
-            setShouldUseIframeState(true); // JKAnime siempre es iframe
+            setShouldUseIframeState(true);
           } else {
             throw new Error(data.error || 'Sin URL de servidor');
           }
         } catch (err) {
           console.warn('[Player Anime] Falló, usando JKAnime directo:', err.message);
-          // Fallback: extraer slug/episode de la URL y abrir JKAnime directo
           const urlParams = new URLSearchParams(currentStreamUrl.split('?')[1] || '');
           const slug = urlParams.get('slug') || 'dragon-ball-super';
           const episode = urlParams.get('episode') || '1';
           if (isMounted) {
             setResolvedStreamUrl(`https://jkanime.net/${slug}/${episode}/`);
             setShouldUseIframeState(true);
+          }
+        } finally {
+          if (isMounted) {
+            setIsResolvingVod(false);
+            setIsLoadingServer(false);
+          }
+        }
+        return;
+      }
+
+      // ── CASO RUDO.VIDEO / REDIRECTOR (Ecuavisa, etc.) ──
+      if (currentStreamUrl.includes('rudo.video') || currentStreamUrl.includes('dps.live')) {
+        setIsResolvingVod(true);
+        setIsLoadingServer(true);
+        setError(false);
+        try {
+          console.log('[Player Rudo] Resolviendo redirección de Rudo Video:', currentStreamUrl);
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 6000);
+          const response = await fetch(currentStreamUrl, { redirect: 'follow', signal: controller.signal });
+          clearTimeout(timeout);
+          if (response.ok && response.url && isMounted) {
+            console.log('[Player Rudo] ✅ URL final resuelta:', response.url.slice(0, 80));
+            setResolvedStreamUrl(response.url);
+            setShouldUseIframeState(false);
+          } else {
+            throw new Error('Respuesta no válida del redirector');
+          }
+        } catch (err) {
+          console.warn('[Player Rudo] Falló resolución directa, usando URL base:', err.message);
+          if (isMounted) {
+            setResolvedStreamUrl(currentStreamUrl);
+            setShouldUseIframeState(false);
           }
         } finally {
           if (isMounted) {
