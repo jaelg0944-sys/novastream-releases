@@ -37,15 +37,18 @@ export default function Player() {
   const [failoverMsg, setFailoverMsg] = useState('');
 
   const isApiUrl = (url) => url && (url.includes('/api/stream') || url.includes('/api/anime'));
-  const isInitialApiUrl = isApiUrl(location.state?.streamUrl);
+  const isNeedsResolving = (url) => url && (isApiUrl(url) || url.includes('rudo.video') || url.includes('dps.live'));
 
-  const [currentStreamUrl, setCurrentStreamUrl] = useState(location.state?.streamUrl || '');
-  const [resolvedStreamUrl, setResolvedStreamUrl] = useState(location.state?.streamUrl || '');
+  const initialUrl = location.state?.streamUrl || '';
+  const initialNeedsResolving = isNeedsResolving(initialUrl);
+
+  const [currentStreamUrl, setCurrentStreamUrl] = useState(initialUrl);
+  const [resolvedStreamUrl, setResolvedStreamUrl] = useState(initialNeedsResolving ? '' : initialUrl);
   const [activeOptionNume, setActiveOptionNume] = useState(currentOptionNume);
   const [showServerMenu, setShowServerMenu] = useState(false);
   const [isLoadingServer, setIsLoadingServer] = useState(true);
-  const [isResolvingVod, setIsResolvingVod] = useState(false);
-  const [shouldUseIframeState, setShouldUseIframeState] = useState(isInitialApiUrl ? false : isIframe);
+  const [isResolvingVod, setIsResolvingVod] = useState(initialNeedsResolving);
+  const [shouldUseIframeState, setShouldUseIframeState] = useState(initialNeedsResolving ? false : isIframe);
   const shakaPlayerRef = useRef(null);
 
   const [isPlaying, setIsPlaying] = useState(true);
