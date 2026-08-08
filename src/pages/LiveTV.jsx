@@ -145,7 +145,8 @@ export default function LiveTV() {
           category: ch.category, 
           isIframe: ch.isIframe || false,
           isDashed: ch.isDashed || false,
-          drm: ch.drm || null
+          drm: ch.drm || null,
+          backups: ch.backups || []
         },
       });
       return;
@@ -165,7 +166,8 @@ export default function LiveTV() {
           channelName: ch.name, 
           category: ch.category,
           isDashed: ch.isDashed || false,
-          drm: ch.drm || null
+          drm: ch.drm || null,
+          backups: ch.backups || []
         },
       });
       return;
@@ -191,7 +193,8 @@ export default function LiveTV() {
             channelName: ch.name, 
             category: ch.category,
             isDashed: ch.isDashed || false,
-            drm: ch.drm || null
+            drm: ch.drm || null,
+            backups: ch.backups || []
           },
         });
       }

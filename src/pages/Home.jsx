@@ -61,6 +61,7 @@ export default function Home() {
               streamUrl: resolvedUrl,
               channelName: item.name,
               category: item.category,
+              backups: item.backups || [],
             },
           });
         }
@@ -80,6 +81,7 @@ export default function Home() {
           streamUrl: item.streamUrl,
           channelName: item.name,
           category: item.category,
+          backups: item.backups || [],
         },
       });
     }
